@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type DragEvent } from 'react'
 import type { Card, Status } from './types'
 import { STATUSES } from './types'
-import { createCard, openIdentityPicker, useBoard, userById } from './store'
+import { createCard, openIdentityPicker, setStatus, useBoard, userById } from './store'
 import UserBadge from './components/UserBadge'
 import Onboarding from './components/Onboarding'
 import CardModal from './components/CardModal'
@@ -9,30 +9,41 @@ import CardModal from './components/CardModal'
 type FilterUser = string | 'all'
 
 export default function App() {
-  const { cards, users, currentUserId } = useBoard()
+  const board = useBoard()
+  const { cards, users, currentUserId } = board
   const currentUser = userById(currentUserId)
 
   const [openCardId, setOpenCardId] = useState<string | null>(null)
+  const [dragOverStatus, setDragOverStatus] = useState<Status | null>(null)
+  const [draggingId, setDraggingId] = useState<string | null>(null)
   const [newTitle, setNewTitle] = useState('')
   const [statusFilter, setStatusFilter] = useState<Status | 'all'>('all')
   const [requesterFilter, setRequesterFilter] = useState<FilterUser>('all')
   const [picFilter, setPicFilter] = useState<FilterUser>('all')
+  const [mineOnly, setMineOnly] = useState(false)
 
   const filtered = useMemo(() => {
     return cards.filter((c) => {
       if (statusFilter !== 'all' && c.status !== statusFilter) return false
       if (requesterFilter !== 'all' && c.request?.requesterId !== requesterFilter) return false
       if (picFilter !== 'all' && c.request?.picId !== picFilter) return false
+      if (mineOnly) {
+        const mine =
+          c.request?.requesterId === currentUserId || c.request?.picId === currentUserId
+        if (!mine) return false
+      }
       return true
     })
-  }, [cards, statusFilter, requesterFilter, picFilter])
+  }, [cards, statusFilter, requesterFilter, picFilter, mineOnly, currentUserId])
 
   const columns = useMemo(() => {
-    const map: Record<Status, Card[]> = { open: [], in_progress: [], done: [] }
+    const map: Record<Status, Card[]> = { todo: [], in_progress: [], review: [], done: [] }
     for (const c of filtered) map[c.status].push(c)
     return map
   }, [filtered])
 
+  if (!board.configured) return <SetupNeeded />
+  if (!board.ready) return <Loading />
   if (!currentUser) return <Onboarding />
 
   const openCard = openCardId ? cards.find((c) => c.id === openCardId) : null
@@ -46,10 +57,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <div className="brand">
-          <span className="brand-dot" />
-          Request Board
-        </div>
+        <div className="brand">tribuo<span className="brand-period">.</span></div>
         <div className="topbar-right">
           <div className="active-users">
             {users.map((u) => (
@@ -98,21 +106,66 @@ export default function App() {
             onChange={setPicFilter}
             options={[{ value: 'all', label: 'All' }, ...users.map((u) => ({ value: u.id, label: u.name }))]}
           />
+          <button
+            type="button"
+            className={`mine-toggle${mineOnly ? ' active' : ''}`}
+            onClick={() => setMineOnly((v) => !v)}
+            style={mineOnly ? { borderColor: currentUser.color, color: currentUser.color } : undefined}
+            title="Show only cards where you are requester or PIC"
+          >
+            <span className="dot" style={{ background: currentUser.color }} />
+            Mine
+          </button>
         </div>
       </div>
 
       <div className="board">
         {STATUSES.map((s) => (
-          <div className="column" key={s.id}>
+          <div
+            className={`column${dragOverStatus === s.id ? ' drag-over' : ''}`}
+            key={s.id}
+            onDragOver={(e) => {
+              e.preventDefault()
+              e.dataTransfer.dropEffect = 'move'
+              if (dragOverStatus !== s.id) setDragOverStatus(s.id)
+            }}
+            onDragLeave={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOverStatus(null)
+            }}
+            onDrop={(e) => {
+              e.preventDefault()
+              const id = e.dataTransfer.getData('text/plain')
+              setDragOverStatus(null)
+              setDraggingId(null)
+              const card = id ? cards.find((c) => c.id === id) : undefined
+              if (card && card.status !== s.id) setStatus(id, s.id)
+            }}
+          >
             <div className={`column-head st-${s.id}`}>
               {s.label}
               <span className="count">{columns[s.id].length}</span>
             </div>
             <div className="column-body">
               {columns[s.id].map((c) => (
-                <CardTile key={c.id} card={c} onOpen={() => setOpenCardId(c.id)} />
+                <CardTile
+                  key={c.id}
+                  card={c}
+                  dragging={draggingId === c.id}
+                  onOpen={() => setOpenCardId(c.id)}
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('text/plain', c.id)
+                    e.dataTransfer.effectAllowed = 'move'
+                    setDraggingId(c.id)
+                  }}
+                  onDragEnd={() => {
+                    setDraggingId(null)
+                    setDragOverStatus(null)
+                  }}
+                />
               ))}
-              {columns[s.id].length === 0 && <div className="column-empty">Nothing here</div>}
+              {columns[s.id].length === 0 && (
+                <div className="column-empty">{dragOverStatus === s.id ? 'Drop here' : 'Nothing here'}</div>
+              )}
             </div>
           </div>
         ))}
@@ -130,17 +183,61 @@ export default function App() {
   )
 }
 
-function CardTile({ card, onOpen }: { card: Card; onOpen: () => void }) {
+function Loading() {
+  return (
+    <div className="center-screen">
+      <div className="spinner" />
+      <p>Loading board…</p>
+    </div>
+  )
+}
+
+function SetupNeeded() {
+  return (
+    <div className="center-screen">
+      <div className="setup-card">
+        <h1>One step left</h1>
+        <p>
+          This board needs a Supabase connection. Create a free project, run{' '}
+          <code>supabase/schema.sql</code> in its SQL editor, then add a <code>.env</code> file:
+        </p>
+        <pre>
+{`VITE_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key`}
+        </pre>
+        <p className="setup-hint">See <code>.env.example</code> and the README. Restart the dev server after saving.</p>
+      </div>
+    </div>
+  )
+}
+
+function CardTile({
+  card,
+  dragging,
+  onOpen,
+  onDragStart,
+  onDragEnd,
+}: {
+  card: Card
+  dragging: boolean
+  onOpen: () => void
+  onDragStart: (e: DragEvent) => void
+  onDragEnd: () => void
+}) {
   const requester = userById(card.request?.requesterId)
   const pic = userById(card.request?.picId)
   return (
     <div
-      className="card"
+      className={`card${dragging ? ' dragging' : ''}`}
       role="button"
       tabIndex={0}
+      draggable
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
       onClick={onOpen}
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onOpen()}
     >
+      <div className="card-drag-handle" aria-hidden="true">⋮⋮</div>
       <div className="card-title">{card.title}</div>
       {card.description && <div className="card-desc">{card.description}</div>}
       {card.request && (

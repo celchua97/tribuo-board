@@ -35,12 +35,19 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
     <div className="modal-overlay" onMouseDown={onClose}>
       <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal-head">
-          <input
-            className="modal-title-input"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            onBlur={saveDetails}
-          />
+          <div className="modal-title-wrap">
+            <label className="field-label" htmlFor="card-title-input">
+              Title
+            </label>
+            <input
+              id="card-title-input"
+              className="modal-title-input"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onBlur={saveDetails}
+              placeholder="Card title…"
+            />
+          </div>
           <button className="icon-btn" onClick={onClose} aria-label="Close">
             ×
           </button>
@@ -59,12 +66,13 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
           ))}
         </div>
 
-        <label className="field-label">Description</label>
+        <label className="field-label">Log</label>
         <textarea
           className="text-area"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           onBlur={saveDetails}
+          placeholder="Log notes, updates, context…"
           rows={3}
         />
 

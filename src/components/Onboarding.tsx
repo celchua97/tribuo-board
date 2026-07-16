@@ -12,8 +12,22 @@ export default function Onboarding() {
   const firstFree = PALETTE.find((p) => !taken.has(p.hex))?.hex ?? PALETTE[0].hex
   const [color, setColor] = useState(firstFree)
   const [name, setName] = useState('')
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
 
-  const canSubmit = name.trim().length > 0 && !taken.has(color)
+  const canSubmit = name.trim().length > 0 && !taken.has(color) && !busy
+
+  const join = async () => {
+    if (!canSubmit) return
+    setBusy(true)
+    setError('')
+    try {
+      await claimIdentity(name, color)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not join the board.')
+      setBusy(false)
+    }
+  }
 
   return (
     <div className="onboard-overlay">
@@ -50,18 +64,15 @@ export default function Onboarding() {
           maxLength={24}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && canSubmit) claimIdentity(name, color)
+            if (e.key === 'Enter') join()
           }}
           autoFocus
         />
 
-        <button
-          type="button"
-          className="btn-primary"
-          disabled={!canSubmit}
-          onClick={() => claimIdentity(name, color)}
-        >
-          Join the board
+        {error && <div className="onboard-error">{error}</div>}
+
+        <button type="button" className="btn-primary" disabled={!canSubmit} onClick={join}>
+          {busy ? 'Joining…' : 'Join the board'}
         </button>
 
         {users.length > 0 && (

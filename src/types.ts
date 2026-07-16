@@ -1,8 +1,9 @@
-export type Status = 'open' | 'in_progress' | 'done'
+export type Status = 'todo' | 'in_progress' | 'review' | 'done'
 
 export const STATUSES: { id: Status; label: string }[] = [
-  { id: 'open', label: 'Open' },
+  { id: 'todo', label: 'To-do' },
   { id: 'in_progress', label: 'In Progress' },
+  { id: 'review', label: 'Review' },
   { id: 'done', label: 'Done' },
 ]
 
@@ -34,4 +35,8 @@ export interface BoardState {
   users: User[]
   cards: Card[]
   currentUserId: string | null
+  /** False until the first load from Supabase completes. */
+  ready: boolean
+  /** False when Supabase env vars are missing (see .env.example). */
+  configured: boolean
 }
