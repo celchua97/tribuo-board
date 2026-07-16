@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { Card, Status, User } from '../types'
 import { STATUSES } from '../types'
 import { textOn } from '../colors'
-import { clearRequest, submitRequest, updateCard, userById } from '../store'
+import { clearRequest, deleteCard, submitRequest, updateCard, userById } from '../store'
 import UserBadge from './UserBadge'
 
 interface Props {
@@ -18,6 +18,7 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
   const [showRequestForm, setShowRequestForm] = useState(false)
   const [picId, setPicId] = useState<string>(users.find((u) => u.id !== currentUser.id)?.id ?? '')
   const [notes, setNotes] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   const requester = userById(card.request?.requesterId)
   const pic = userById(card.request?.picId)
@@ -29,6 +30,11 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
     submitRequest(card.id, currentUser.id, picId, notes)
     setShowRequestForm(false)
     setNotes('')
+  }
+
+  const remove = () => {
+    deleteCard(card.id)
+    onClose()
   }
 
   return (
@@ -135,6 +141,26 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
           ) : (
             <button className="btn-outline" onClick={() => setShowRequestForm(true)}>
               + Submit a request
+            </button>
+          )}
+        </div>
+
+        <div className="modal-footer">
+          {confirmDelete ? (
+            <div className="confirm-delete">
+              <span>Delete this card? This can’t be undone.</span>
+              <div className="row-actions">
+                <button className="btn-danger" onClick={remove}>
+                  Delete
+                </button>
+                <button className="btn-ghost" onClick={() => setConfirmDelete(false)}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button className="link-btn danger" onClick={() => setConfirmDelete(true)}>
+              Delete card
             </button>
           )}
         </div>

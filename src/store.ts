@@ -199,6 +199,13 @@ export function setStatus(id: string, status: Status) {
   return updateCard(id, { status })
 }
 
+export async function deleteCard(id: string): Promise<void> {
+  if (!supabase) return
+  // Optimistic removal; realtime confirms for every other client.
+  set({ cards: state.cards.filter((c) => c.id !== id) })
+  await supabase.from('cards').delete().eq('id', id)
+}
+
 export async function submitRequest(
   cardId: string,
   requesterId: string,
