@@ -228,7 +228,8 @@ function CardTile({
   const pic = userById(card.request?.picId)
   return (
     <div
-      className={`card${dragging ? ' dragging' : ''}`}
+      className={`card${dragging ? ' dragging' : ''}${requester ? ' has-request' : ''}`}
+      style={requester ? { borderLeftColor: requester.color } : undefined}
       role="button"
       tabIndex={0}
       draggable
