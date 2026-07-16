@@ -59,11 +59,6 @@ export default function App() {
       <header className="topbar">
         <div className="brand">tribuo<span className="brand-period">.</span></div>
         <div className="topbar-right">
-          <div className="active-users">
-            {users.map((u) => (
-              <UserBadge key={u.id} user={u} size="sm" />
-            ))}
-          </div>
           <div className="me">
             <UserBadge user={currentUser} showName />
             <button className="switch-btn" onClick={openIdentityPicker} title="Add or switch teammate">

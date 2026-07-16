@@ -60,16 +60,10 @@ button {
   align-items: center;
   gap: 18px;
 }
-.active-users {
-  display: flex;
-  gap: 4px;
-}
 .me {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding-left: 14px;
-  border-left: 1px solid var(--border);
 }
 .switch-btn {
   background: transparent;
@@ -100,6 +94,7 @@ button {
 }
 .filters {
   display: flex;
+  align-items: flex-end;
   gap: 12px;
 }
 .filter {
@@ -116,6 +111,7 @@ button {
   font-size: 10px;
 }
 .filter select {
+  width: 130px;
   padding: 7px 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
