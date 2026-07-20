@@ -43,17 +43,10 @@ button {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
-.brand {
-  display: flex;
-  align-items: center;
-  font-weight: 800;
-  font-size: 24px;
-  letter-spacing: -0.03em;
-  color: var(--brand);
-  line-height: 1;
-}
-.brand-period {
-  color: var(--brand);
+.brand-logo {
+  height: 26px;
+  width: auto;
+  display: block;
 }
 .topbar-right {
   display: flex;

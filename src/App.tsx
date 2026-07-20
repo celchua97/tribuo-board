@@ -2,6 +2,7 @@ import { useMemo, useState, type DragEvent } from 'react'
 import type { Card, Status } from './types'
 import { STATUSES } from './types'
 import { createCard, openIdentityPicker, setStatus, useBoard, userById } from './store'
+import logoUrl from './assets/tribuo-logo.svg'
 import UserBadge from './components/UserBadge'
 import Onboarding from './components/Onboarding'
 import CardModal from './components/CardModal'
@@ -57,7 +58,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <div className="brand">tribuo<span className="brand-period">.</span></div>
+        <img className="brand-logo" src={logoUrl} alt="tribuo" />
         <div className="topbar-right">
           <div className="me">
             <UserBadge user={currentUser} showName />
