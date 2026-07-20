@@ -177,12 +177,35 @@ export async function createCard(title: string, description: string): Promise<vo
   if (!supabase) return
   const t = title.trim()
   if (!t) return
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('cards')
     .insert({ title: t, description: description.trim(), status: 'todo' })
     .select()
     .single()
+  if (error) {
+    console.error('Failed to create card:', error.message)
+    return
+  }
   if (data) set({ cards: [mapCard(data as CardRow), ...state.cards] })
+}
+
+/**
+ * Every write below applies its change optimistically, then confirms against
+ * Supabase. If the write fails (RLS denial, network drop), the optimistic
+ * state would otherwise diverge from the server forever with no feedback —
+ * so on error we log it and refetch to self-heal back to server truth.
+ */
+async function writeCards(
+  optimisticCards: Card[],
+  op: () => PromiseLike<{ error: { message: string } | null }>,
+  failureContext: string,
+) {
+  set({ cards: optimisticCards })
+  const { error } = await op()
+  if (error) {
+    console.error(`${failureContext}:`, error.message)
+    refetch()
+  }
 }
 
 export async function updateCard(
@@ -190,9 +213,12 @@ export async function updateCard(
   patch: Partial<Pick<Card, 'title' | 'description' | 'status'>>,
 ): Promise<void> {
   if (!supabase) return
-  // Optimistic local patch.
-  set({ cards: state.cards.map((c) => (c.id === id ? { ...c, ...patch } : c)) })
-  await supabase.from('cards').update(patch).eq('id', id)
+  const client = supabase
+  await writeCards(
+    state.cards.map((c) => (c.id === id ? { ...c, ...patch } : c)),
+    () => client.from('cards').update(patch).eq('id', id),
+    'Failed to update card, re-syncing from server',
+  )
 }
 
 export function setStatus(id: string, status: Status) {
@@ -201,9 +227,12 @@ export function setStatus(id: string, status: Status) {
 
 export async function deleteCard(id: string): Promise<void> {
   if (!supabase) return
-  // Optimistic removal; realtime confirms for every other client.
-  set({ cards: state.cards.filter((c) => c.id !== id) })
-  await supabase.from('cards').delete().eq('id', id)
+  const client = supabase
+  await writeCards(
+    state.cards.filter((c) => c.id !== id),
+    () => client.from('cards').delete().eq('id', id),
+    'Failed to delete card, re-syncing from server',
+  )
 }
 
 export async function submitRequest(
@@ -213,9 +242,10 @@ export async function submitRequest(
   notes: string,
 ): Promise<void> {
   if (!supabase) return
+  const client = supabase
   const requested_at = new Date().toISOString()
-  set({
-    cards: state.cards.map((c) =>
+  await writeCards(
+    state.cards.map((c) =>
       c.id === cardId
         ? {
             ...c,
@@ -223,26 +253,31 @@ export async function submitRequest(
           }
         : c,
     ),
-  })
-  await supabase
-    .from('cards')
-    .update({ requester_id: requesterId, pic_id: picId, notes: notes.trim(), requested_at })
-    .eq('id', cardId)
+    () =>
+      client
+        .from('cards')
+        .update({ requester_id: requesterId, pic_id: picId, notes: notes.trim(), requested_at })
+        .eq('id', cardId),
+    'Failed to submit request, re-syncing from server',
+  )
 }
 
 export async function clearRequest(cardId: string): Promise<void> {
   if (!supabase) return
-  set({
-    cards: state.cards.map((c) => {
+  const client = supabase
+  await writeCards(
+    state.cards.map((c) => {
       if (c.id !== cardId) return c
       const { request: _omit, ...rest } = c
       return rest
     }),
-  })
-  await supabase
-    .from('cards')
-    .update({ requester_id: null, pic_id: null, notes: '', requested_at: null })
-    .eq('id', cardId)
+    () =>
+      client
+        .from('cards')
+        .update({ requester_id: null, pic_id: null, notes: '', requested_at: null })
+        .eq('id', cardId),
+    'Failed to withdraw request, re-syncing from server',
+  )
 }
 
 /** Open (non-done) cards where the user is requester or PIC. */

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Card, Status, User } from '../types'
 import { STATUSES } from '../types'
 import { textOn } from '../colors'
@@ -19,6 +19,14 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
   const [picId, setPicId] = useState<string>(users.find((u) => u.id !== currentUser.id)?.id ?? '')
   const [notes, setNotes] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
+
+  // Re-sync if the card changes under us (e.g. another user edits it via
+  // realtime while this modal is open) so a blur-save can't clobber their
+  // update with our stale local buffer.
+  useEffect(() => {
+    setTitle(card.title)
+    setDescription(card.description)
+  }, [card.title, card.description])
 
   const requester = userById(card.request?.requesterId)
   const pic = userById(card.request?.picId)

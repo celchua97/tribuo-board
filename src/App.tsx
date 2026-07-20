@@ -39,7 +39,12 @@ export default function App() {
 
   const columns = useMemo(() => {
     const map: Record<Status, Card[]> = { todo: [], in_progress: [], review: [], done: [] }
-    for (const c of filtered) map[c.status].push(c)
+    for (const c of filtered) {
+      // Guard against a status value outside the known set (e.g. stale data,
+      // a manual DB edit) — fall back to To-do instead of crashing the board.
+      const bucket = map[c.status] ?? map.todo
+      bucket.push(c)
+    }
     return map
   }, [filtered])
 
