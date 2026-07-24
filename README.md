@@ -10,7 +10,7 @@ Sign up at [supabase.com](https://supabase.com) (free tier is enough) and create
 
 ### 2. Create the tables
 
-In the Supabase dashboard: **SQL Editor → New query**, paste the contents of [`supabase/schema.sql`](supabase/schema.sql), and **Run**. This creates the `users` and `cards` tables, permissive RLS policies, realtime, and a few seed cards.
+In the Supabase dashboard: **SQL Editor → New query**, paste the contents of [`supabase/schema.sql`](supabase/schema.sql), and **Run**. This creates the `users`, `cards`, and `attachments` tables, the `card-attachments` storage bucket, permissive RLS policies, realtime, and a few seed cards. The whole file is safe to re-run any time you pull a newer version — every statement is idempotent.
 
 ### 3. Add your credentials
 
@@ -39,6 +39,7 @@ Opens at http://localhost:5180. (Restart the dev server after creating/editing `
 - **Popovers.** Hover or click any color swatch to see that person's name and their open requests (as requester or PIC). Clicking pins it open; click outside to dismiss.
 - **Filter & sort.** Filter the board by status, requester, or PIC from the toolbar — or hit **Mine** to show only cards where *you* are the requester or PIC.
 - **Switch / add teammates.** The *Switch* button (top-right) reopens the identity picker so you can add another teammate or continue as an existing one.
+- **Attachments.** Every card has an *Attachments* section — **+ Add file** uploads a document or image (10 MB max, stored in the `card-attachments` bucket); **+ Add link** attaches an external URL with an optional label. Images show a thumbnail; everything else shows a file/link icon. Each attachment shows who added it (their color) and can be removed by anyone. Deleting a card also deletes its file attachments from storage.
 
 ## Persistence
 

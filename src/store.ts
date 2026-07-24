@@ -1,6 +1,14 @@
 import { useSyncExternalStore } from 'react'
-import type { BoardState, Card, Status, User } from './types'
-import { supabase, isConfigured, type CardRow, type UserRow } from './supabase'
+import type { Attachment, BoardState, Card, Status, User } from './types'
+import {
+  supabase,
+  isConfigured,
+  ATTACHMENTS_BUCKET,
+  MAX_ATTACHMENT_BYTES,
+  type AttachmentRow,
+  type CardRow,
+  type UserRow,
+} from './supabase'
 
 /**
  * Persistence layer, backed by Supabase.
@@ -37,6 +45,7 @@ function saveCurrentUserId(id: string | null) {
 let state: BoardState = {
   users: [],
   cards: [],
+  attachments: {},
   currentUserId: loadCurrentUserId(),
   ready: false,
   configured: isConfigured,
@@ -79,17 +88,42 @@ function mapCard(r: CardRow): Card {
   return card
 }
 
+function mapAttachment(r: AttachmentRow): Attachment {
+  return {
+    id: r.id,
+    cardId: r.card_id,
+    kind: r.kind as 'file' | 'link',
+    name: r.name,
+    url: r.url,
+    mimeType: r.mime_type,
+    storagePath: r.storage_path,
+    addedBy: r.added_by,
+    createdAt: Date.parse(r.created_at),
+  }
+}
+
 // ---- Hydration + realtime ----
 
 async function refetch() {
   if (!supabase) return
-  const [usersRes, cardsRes] = await Promise.all([
+  const [usersRes, cardsRes, attachmentsRes] = await Promise.all([
     supabase.from('users').select('*').order('created_at', { ascending: true }),
     supabase.from('cards').select('*').order('created_at', { ascending: false }),
+    supabase.from('attachments').select('*').order('created_at', { ascending: true }),
   ])
 
   const users = (usersRes.data as UserRow[] | null)?.map(mapUser) ?? state.users
   const cards = (cardsRes.data as CardRow[] | null)?.map(mapCard) ?? state.cards
+  const attachmentRows = (attachmentsRes.data as AttachmentRow[] | null)?.map(mapAttachment)
+  let attachments = state.attachments
+  if (attachmentRows) {
+    const grouped: Record<string, Attachment[]> = {}
+    for (const a of attachmentRows) {
+      if (!grouped[a.cardId]) grouped[a.cardId] = []
+      grouped[a.cardId].push(a)
+    }
+    attachments = grouped
+  }
 
   // Drop a stale current-user id only if that user was actually removed from a
   // non-empty user list (avoids nulling it out on a transient empty response).
@@ -98,7 +132,7 @@ async function refetch() {
     state.currentUserId && users.length > 0 && !stillExists ? null : state.currentUserId
   if (currentUserId !== state.currentUserId) saveCurrentUserId(currentUserId)
 
-  set({ users, cards, currentUserId, ready: true })
+  set({ users, cards, attachments, currentUserId, ready: true })
 }
 
 let started = false
@@ -116,6 +150,7 @@ export function initStore() {
     .channel('board')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => refetch())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'cards' }, () => refetch())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'attachments' }, () => refetch())
     .subscribe()
 }
 
@@ -230,11 +265,27 @@ export function setStatus(id: string, status: Status) {
 export async function deleteCard(id: string): Promise<void> {
   if (!supabase) return
   const client = supabase
+
+  // The DB cascades attachment ROWS on card delete, but not their storage
+  // OBJECTS — clean those up first so deleted cards don't leak storage quota.
+  const filePaths = (state.attachments[id] ?? [])
+    .filter((a) => a.kind === 'file' && a.storagePath)
+    .map((a) => a.storagePath as string)
+  if (filePaths.length > 0) {
+    const { error: storageError } = await client.storage.from(ATTACHMENTS_BUCKET).remove(filePaths)
+    if (storageError) console.error('Failed to delete some attachment files:', storageError.message)
+  }
+
   await writeCards(
     state.cards.filter((c) => c.id !== id),
     () => client.from('cards').delete().eq('id', id),
     'Failed to delete card, re-syncing from server',
   )
+
+  if (state.attachments[id]) {
+    const { [id]: _omit, ...rest } = state.attachments
+    set({ attachments: rest })
+  }
 }
 
 export async function submitRequest(
@@ -290,4 +341,110 @@ export function openRequestsFor(userId: string): Card[] {
       c.request &&
       (c.request.requesterId === userId || c.request.picId === userId),
   )
+}
+
+// ---- Attachments ----
+
+export function attachmentsFor(cardId: string): Attachment[] {
+  return state.attachments[cardId] ?? []
+}
+
+function addAttachmentToState(attachment: Attachment) {
+  set({
+    attachments: {
+      ...state.attachments,
+      [attachment.cardId]: [...(state.attachments[attachment.cardId] ?? []), attachment],
+    },
+  })
+}
+
+export async function addLinkAttachment(
+  cardId: string,
+  url: string,
+  label: string,
+  addedBy: string,
+): Promise<{ error?: string }> {
+  if (!supabase) return { error: 'Not configured' }
+  const trimmed = url.trim()
+  if (!trimmed) return { error: 'Enter a URL.' }
+  const href = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
+  const { data, error } = await supabase
+    .from('attachments')
+    .insert({ card_id: cardId, kind: 'link', name: label.trim() || href, url: href, added_by: addedBy })
+    .select()
+    .single()
+  if (error) {
+    console.error('Failed to add link:', error.message)
+    return { error: error.message }
+  }
+  if (data) addAttachmentToState(mapAttachment(data as AttachmentRow))
+  return {}
+}
+
+export async function uploadFileAttachment(
+  cardId: string,
+  file: File,
+  addedBy: string,
+): Promise<{ error?: string }> {
+  if (!supabase) return { error: 'Not configured' }
+  if (file.size > MAX_ATTACHMENT_BYTES) {
+    return { error: `File is too large (max ${Math.round(MAX_ATTACHMENT_BYTES / 1024 / 1024)} MB).` }
+  }
+  const client = supabase
+  const path = `${cardId}/${crypto.randomUUID()}-${file.name}`
+
+  const { error: uploadError } = await client.storage.from(ATTACHMENTS_BUCKET).upload(path, file)
+  if (uploadError) {
+    console.error('Failed to upload file:', uploadError.message)
+    return { error: uploadError.message }
+  }
+
+  const { data: pub } = client.storage.from(ATTACHMENTS_BUCKET).getPublicUrl(path)
+  const { data, error } = await client
+    .from('attachments')
+    .insert({
+      card_id: cardId,
+      kind: 'file',
+      name: file.name,
+      url: pub.publicUrl,
+      mime_type: file.type || null,
+      storage_path: path,
+      added_by: addedBy,
+    })
+    .select()
+    .single()
+  if (error) {
+    console.error('Failed to save attachment record:', error.message)
+    await client.storage.from(ATTACHMENTS_BUCKET).remove([path]) // avoid an orphaned upload
+    return { error: error.message }
+  }
+  if (data) addAttachmentToState(mapAttachment(data as AttachmentRow))
+  return {}
+}
+
+export async function removeAttachment(attachment: Attachment): Promise<void> {
+  if (!supabase) return
+  const client = supabase
+  set({
+    attachments: {
+      ...state.attachments,
+      [attachment.cardId]: (state.attachments[attachment.cardId] ?? []).filter(
+        (a) => a.id !== attachment.id,
+      ),
+    },
+  })
+  const { error } = await client.from('attachments').delete().eq('id', attachment.id)
+  if (error) {
+    console.error('Failed to remove attachment, re-syncing from server:', error.message)
+    refetch()
+    return
+  }
+  if (attachment.kind === 'file' && attachment.storagePath) {
+    const { error: storageError } = await client.storage
+      .from(ATTACHMENTS_BUCKET)
+      .remove([attachment.storagePath])
+    if (storageError) {
+      console.error('Failed to delete storage object (row already removed):', storageError.message)
+    }
+  }
 }

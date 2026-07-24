@@ -31,9 +31,24 @@ export interface Card {
   request?: CardRequest
 }
 
+export interface Attachment {
+  id: string
+  cardId: string
+  kind: 'file' | 'link'
+  name: string
+  url: string
+  mimeType: string | null
+  /** Storage object path; null for 'link' attachments. */
+  storagePath: string | null
+  addedBy: string | null
+  createdAt: number
+}
+
 export interface BoardState {
   users: User[]
   cards: Card[]
+  /** Keyed by card id. */
+  attachments: Record<string, Attachment[]>
   currentUserId: string | null
   /** False until the first load from Supabase completes. */
   ready: boolean

@@ -39,3 +39,18 @@ export interface CardRow {
   requested_at: string | null
   created_at: string
 }
+
+export interface AttachmentRow {
+  id: string
+  card_id: string
+  kind: string
+  name: string
+  url: string
+  mime_type: string | null
+  storage_path: string | null
+  added_by: string | null
+  created_at: string
+}
+
+export const ATTACHMENTS_BUCKET = 'card-attachments'
+export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024

@@ -1,8 +1,18 @@
-import { useEffect, useState } from 'react'
-import type { Card, Status, User } from '../types'
+import { useEffect, useRef, useState, type ChangeEvent } from 'react'
+import type { Attachment, Card, Status, User } from '../types'
 import { STATUSES } from '../types'
 import { textOn } from '../colors'
-import { clearRequest, deleteCard, submitRequest, updateCard, userById } from '../store'
+import {
+  addLinkAttachment,
+  attachmentsFor,
+  clearRequest,
+  deleteCard,
+  removeAttachment,
+  submitRequest,
+  updateCard,
+  uploadFileAttachment,
+  userById,
+} from '../store'
 import UserBadge from './UserBadge'
 
 interface Props {
@@ -19,6 +29,12 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
   const [picId, setPicId] = useState<string>(users.find((u) => u.id !== currentUser.id)?.id ?? '')
   const [notes, setNotes] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [showLinkForm, setShowLinkForm] = useState(false)
+  const [linkUrl, setLinkUrl] = useState('')
+  const [linkLabel, setLinkLabel] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const [attachmentError, setAttachmentError] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Re-sync if the card changes under us (e.g. another user edits it via
   // realtime while this modal is open) so a blur-save can't clobber their
@@ -43,6 +59,31 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
   const remove = () => {
     deleteCard(card.id)
     onClose()
+  }
+
+  const attachments = attachmentsFor(card.id)
+
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = '' // allow re-selecting the same file later
+    if (!file) return
+    setUploading(true)
+    setAttachmentError('')
+    const { error } = await uploadFileAttachment(card.id, file, currentUser.id)
+    setUploading(false)
+    if (error) setAttachmentError(error)
+  }
+
+  const submitLink = async () => {
+    const { error } = await addLinkAttachment(card.id, linkUrl, linkLabel, currentUser.id)
+    if (error) {
+      setAttachmentError(error)
+      return
+    }
+    setShowLinkForm(false)
+    setLinkUrl('')
+    setLinkLabel('')
+    setAttachmentError('')
   }
 
   return (
@@ -89,6 +130,73 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
           placeholder="Log notes, updates, context…"
           rows={3}
         />
+
+        <div className="attachments-section">
+          <span className="field-label">Attachments</span>
+
+          {attachments.length > 0 && (
+            <ul className="attachment-list">
+              {attachments.map((a) => (
+                <AttachmentRow key={a.id} attachment={a} onRemove={() => removeAttachment(a)} />
+              ))}
+            </ul>
+          )}
+
+          {attachmentError && <div className="attachment-error">{attachmentError}</div>}
+
+          {showLinkForm ? (
+            <div className="link-form">
+              <input
+                className="text-input"
+                placeholder="https://…"
+                value={linkUrl}
+                onChange={(e) => setLinkUrl(e.target.value)}
+                autoFocus
+              />
+              <input
+                className="text-input"
+                placeholder="Label (optional)"
+                value={linkLabel}
+                onChange={(e) => setLinkLabel(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && submitLink()}
+              />
+              <div className="row-actions">
+                <button className="btn-primary" disabled={!linkUrl.trim()} onClick={submitLink}>
+                  Add link
+                </button>
+                <button
+                  className="btn-ghost"
+                  onClick={() => {
+                    setShowLinkForm(false)
+                    setAttachmentError('')
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="attachment-actions">
+              <button
+                type="button"
+                className="btn-outline"
+                disabled={uploading}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {uploading ? 'Uploading…' : '+ Add file'}
+              </button>
+              <button type="button" className="btn-outline" onClick={() => setShowLinkForm(true)}>
+                + Add link
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="visually-hidden"
+                onChange={handleFileChange}
+              />
+            </div>
+          )}
+        </div>
 
         <div className="request-section">
           <div className="field-label-row">
@@ -174,5 +282,34 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
         </div>
       </div>
     </div>
+  )
+}
+
+function AttachmentRow({ attachment, onRemove }: { attachment: Attachment; onRemove: () => void }) {
+  const addedBy = userById(attachment.addedBy)
+  const isImage = attachment.kind === 'file' && (attachment.mimeType ?? '').startsWith('image/')
+  return (
+    <li className="attachment-row">
+      <a
+        className="attachment-link"
+        href={attachment.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        title={attachment.name}
+      >
+        {isImage ? (
+          <img className="attachment-thumb" src={attachment.url} alt="" />
+        ) : (
+          <span className="attachment-icon" aria-hidden="true">
+            {attachment.kind === 'link' ? '🔗' : '📄'}
+          </span>
+        )}
+        <span className="attachment-name">{attachment.name}</span>
+      </a>
+      <UserBadge user={addedBy} role="Added by" size="sm" />
+      <button className="icon-btn attachment-remove" onClick={onRemove} aria-label="Remove attachment">
+        ×
+      </button>
+    </li>
   )
 }
