@@ -88,12 +88,12 @@ button {
 .filters {
   display: flex;
   align-items: flex-end;
-  gap: 12px;
+  gap: 20px;
 }
 .filter {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   font-size: 12px;
 }
 .filter-label {
@@ -105,7 +105,7 @@ button {
 }
 .filter select {
   width: 130px;
-  padding: 7px 10px;
+  padding: 9px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
@@ -835,7 +835,7 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 12px;
+  padding: 9px 14px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
