@@ -34,6 +34,7 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
   const [linkLabel, setLinkLabel] = useState('')
   const [uploading, setUploading] = useState(false)
   const [attachmentError, setAttachmentError] = useState('')
+  const [previewAttachment, setPreviewAttachment] = useState<Attachment | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Re-sync if the card changes under us (e.g. another user edits it via
@@ -87,7 +88,8 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
   }
 
   return (
-    <div className="modal-overlay" onMouseDown={onClose}>
+    <>
+      <div className="modal-overlay" onMouseDown={onClose}>
       <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <div className="modal-title-wrap">
@@ -137,7 +139,12 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
           {attachments.length > 0 && (
             <ul className="attachment-list">
               {attachments.map((a) => (
-                <AttachmentRow key={a.id} attachment={a} onRemove={() => removeAttachment(a)} />
+                <AttachmentRow
+                  key={a.id}
+                  attachment={a}
+                  onRemove={() => removeAttachment(a)}
+                  onPreview={() => setPreviewAttachment(a)}
+                />
               ))}
             </ul>
           )}
@@ -282,30 +289,63 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
         </div>
       </div>
     </div>
+
+    {previewAttachment && (
+      <div className="lightbox-overlay" onMouseDown={() => setPreviewAttachment(null)}>
+        <div className="lightbox-content" onMouseDown={(e) => e.stopPropagation()}>
+          <button
+            className="icon-btn lightbox-close"
+            onClick={() => setPreviewAttachment(null)}
+            aria-label="Close preview"
+          >
+            ×
+          </button>
+          <img className="lightbox-image" src={previewAttachment.url} alt={previewAttachment.name} />
+          <div className="lightbox-caption">{previewAttachment.name}</div>
+        </div>
+      </div>
+    )}
+    </>
   )
 }
 
-function AttachmentRow({ attachment, onRemove }: { attachment: Attachment; onRemove: () => void }) {
+function AttachmentRow({
+  attachment,
+  onRemove,
+  onPreview,
+}: {
+  attachment: Attachment
+  onRemove: () => void
+  onPreview: () => void
+}) {
   const addedBy = userById(attachment.addedBy)
   const isImage = attachment.kind === 'file' && (attachment.mimeType ?? '').startsWith('image/')
+  const content = isImage ? (
+    <img className="attachment-thumb" src={attachment.url} alt="" />
+  ) : (
+    <span className="attachment-icon" aria-hidden="true">
+      {attachment.kind === 'link' ? '🔗' : '📄'}
+    </span>
+  )
   return (
     <li className="attachment-row">
-      <a
-        className="attachment-link"
-        href={attachment.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        title={attachment.name}
-      >
-        {isImage ? (
-          <img className="attachment-thumb" src={attachment.url} alt="" />
-        ) : (
-          <span className="attachment-icon" aria-hidden="true">
-            {attachment.kind === 'link' ? '🔗' : '📄'}
-          </span>
-        )}
-        <span className="attachment-name">{attachment.name}</span>
-      </a>
+      {isImage ? (
+        <button type="button" className="attachment-link" onClick={onPreview} title={attachment.name}>
+          {content}
+          <span className="attachment-name">{attachment.name}</span>
+        </button>
+      ) : (
+        <a
+          className="attachment-link"
+          href={attachment.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={attachment.name}
+        >
+          {content}
+          <span className="attachment-name">{attachment.name}</span>
+        </a>
+      )}
       <UserBadge user={addedBy} role="Added by" size="sm" />
       <button className="icon-btn attachment-remove" onClick={onRemove} aria-label="Remove attachment">
         ×
