@@ -173,10 +173,9 @@ export function openIdentityPicker() {
 
 // ---- Cards ----
 
-export async function createCard(title: string, description: string): Promise<void> {
-  if (!supabase) return
-  const t = title.trim()
-  if (!t) return
+export async function createCard(title: string, description: string): Promise<Card | null> {
+  if (!supabase) return null
+  const t = title.trim() || 'New card'
   const { data, error } = await supabase
     .from('cards')
     .insert({ title: t, description: description.trim(), status: 'todo' })
@@ -184,9 +183,12 @@ export async function createCard(title: string, description: string): Promise<vo
     .single()
   if (error) {
     console.error('Failed to create card:', error.message)
-    return
+    return null
   }
-  if (data) set({ cards: [mapCard(data as CardRow), ...state.cards] })
+  if (!data) return null
+  const card = mapCard(data as CardRow)
+  set({ cards: [card, ...state.cards] })
+  return card
 }
 
 /**

@@ -17,7 +17,6 @@ export default function App() {
   const [openCardId, setOpenCardId] = useState<string | null>(null)
   const [dragOverStatus, setDragOverStatus] = useState<Status | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
-  const [newTitle, setNewTitle] = useState('')
   const [statusFilter, setStatusFilter] = useState<Status | 'all'>('all')
   const [requesterFilter, setRequesterFilter] = useState<FilterUser>('all')
   const [picFilter, setPicFilter] = useState<FilterUser>('all')
@@ -54,10 +53,9 @@ export default function App() {
 
   const openCard = openCardId ? cards.find((c) => c.id === openCardId) : null
 
-  const addCard = () => {
-    if (!newTitle.trim()) return
-    createCard(newTitle, '')
-    setNewTitle('')
+  const addCard = async () => {
+    const card = await createCard('New card', '')
+    if (card) setOpenCardId(card.id)
   }
 
   return (
@@ -75,18 +73,9 @@ export default function App() {
       </header>
 
       <div className="toolbar">
-        <div className="new-card">
-          <input
-            className="text-input"
-            placeholder="New card title…"
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && addCard()}
-          />
-          <button className="btn-primary" onClick={addCard}>
-            Add
-          </button>
-        </div>
+        <button className="btn-primary" onClick={addCard}>
+          + Add card
+        </button>
 
         <div className="filters">
           <FilterSelect
