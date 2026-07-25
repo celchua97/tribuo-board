@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import type { Attachment, Card, Status, User } from '../types'
 import { STATUSES } from '../types'
 import { textOn } from '../colors'
-import { formatPickup, formatShortDate, pickupDays } from '../dates'
+import { formatShortDate } from '../dates'
 import {
   addLinkAttachment,
   archiveCard,
@@ -147,11 +147,6 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
             >
               Clear
             </button>
-          )}
-          {card.dueDateSetAt && (
-            <span className="pickup-pill">
-              {formatPickup(pickupDays(card.createdAt, card.dueDateSetAt))}
-            </span>
           )}
         </div>
 

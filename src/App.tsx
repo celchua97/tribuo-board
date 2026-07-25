@@ -6,11 +6,9 @@ import {
   formatDueCountdown,
   formatDueDate,
   formatMonthLabel,
-  formatPickup,
   formatShortDate,
   isDueSoon,
   isOverdue,
-  pickupDays,
 } from './dates'
 import logoUrl from './assets/tribuo-logo.svg'
 import UserBadge from './components/UserBadge'
@@ -289,11 +287,6 @@ function CardTile({
       <div className="card-drag-handle" aria-hidden="true">⋮⋮</div>
       <div className="card-title">{card.title}</div>
       {card.description && <div className="card-desc">{card.description}</div>}
-      {card.dueDateSetAt && (
-        <div className="card-meta">
-          <span className="pickup-pill">{formatPickup(pickupDays(card.createdAt, card.dueDateSetAt))}</span>
-        </div>
-      )}
       {card.request && (
         <div className="card-tags" onClick={(e) => e.stopPropagation()}>
           <UserBadge user={requester} role="Requester" size="sm" />
