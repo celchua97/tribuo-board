@@ -2,7 +2,16 @@ import { useMemo, useState, type DragEvent } from 'react'
 import type { Card, Status } from './types'
 import { STATUSES } from './types'
 import { createCard, openIdentityPicker, restoreCard, setStatus, useBoard, userById } from './store'
-import { formatDueDate, formatMonthLabel, formatPickup, formatShortDate, isDueSoon, isOverdue, pickupDays } from './dates'
+import {
+  formatDueCountdown,
+  formatDueDate,
+  formatMonthLabel,
+  formatPickup,
+  formatShortDate,
+  isDueSoon,
+  isOverdue,
+  pickupDays,
+} from './dates'
 import logoUrl from './assets/tribuo-logo.svg'
 import UserBadge from './components/UserBadge'
 import Onboarding from './components/Onboarding'
@@ -280,16 +289,9 @@ function CardTile({
       <div className="card-drag-handle" aria-hidden="true">⋮⋮</div>
       <div className="card-title">{card.title}</div>
       {card.description && <div className="card-desc">{card.description}</div>}
-      {(card.dueDate || card.dueDateSetAt) && (
+      {card.dueDateSetAt && (
         <div className="card-meta">
-          {card.dueDate && (
-            <span className={`due-pill${overdue ? ' overdue' : dueSoon ? ' due-soon' : ''}`}>
-              Due {formatDueDate(card.dueDate)}
-            </span>
-          )}
-          {card.dueDateSetAt && (
-            <span className="pickup-pill">{formatPickup(pickupDays(card.createdAt, card.dueDateSetAt))}</span>
-          )}
+          <span className="pickup-pill">{formatPickup(pickupDays(card.createdAt, card.dueDateSetAt))}</span>
         </div>
       )}
       {card.request && (
@@ -297,6 +299,13 @@ function CardTile({
           <UserBadge user={requester} role="Requester" size="sm" />
           <span className="arrow-sm">→</span>
           <UserBadge user={pic} role="PIC" size="sm" />
+        </div>
+      )}
+      {card.dueDate && (
+        <div className="card-due-footer">
+          <span className={`due-pill${overdue ? ' overdue' : dueSoon ? ' due-soon' : ''}`}>
+            {formatDueDate(card.dueDate)} · {formatDueCountdown(card.dueDate)}
+          </span>
         </div>
       )}
     </div>

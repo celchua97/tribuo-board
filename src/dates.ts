@@ -23,6 +23,25 @@ export function isDueSoon(dueDate: string, status: Status): boolean {
   return diffDays <= 2
 }
 
+function startOfToday(): Date {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+/** Whole days from today to the due date (negative once it's past). */
+export function daysUntilDue(dueDate: string): number {
+  return Math.round((parseDateOnly(dueDate).getTime() - startOfToday().getTime()) / 86_400_000)
+}
+
+export function formatDueCountdown(dueDate: string): string {
+  const days = daysUntilDue(dueDate)
+  if (days === 0) return 'due today'
+  if (days > 0) return days === 1 ? '1 day left' : `${days} days left`
+  const overdue = Math.abs(days)
+  return overdue === 1 ? '1 day overdue' : `${overdue} days overdue`
+}
+
 /** Days between card creation and the first time a due date was assigned. */
 export function pickupDays(createdAt: number, dueDateSetAt: number): number {
   return Math.max(0, Math.round((dueDateSetAt - createdAt) / 86_400_000))
