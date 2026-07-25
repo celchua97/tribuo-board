@@ -29,6 +29,12 @@ export interface Card {
   createdAt: number
   /** Present only once a request has been submitted on this card. */
   request?: CardRequest
+  /** ISO date string (YYYY-MM-DD), adjustable by anyone at any time. */
+  dueDate: string | null
+  /** Stamped the first time a due date is assigned; never reset by later edits. */
+  dueDateSetAt: number | null
+  /** Set when a Done card is manually moved to History. */
+  archivedAt: number | null
 }
 
 export interface Attachment {

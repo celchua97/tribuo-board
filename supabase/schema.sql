@@ -30,6 +30,18 @@ create table if not exists public.cards (
 
 create index if not exists cards_status_idx on public.cards (status);
 
+-- Due date: settable/adjustable by anyone at any time. due_date_set_at is
+-- stamped the FIRST time a due date is assigned (not on later adjustments) —
+-- it's the "how long before this got picked up" signal, so it must not reset
+-- when someone later reschedules the deadline.
+alter table public.cards add column if not exists due_date date;
+alter table public.cards add column if not exists due_date_set_at timestamptz;
+-- Archiving: manual, only meaningful once a card is Done. Cards with
+-- archived_at set are excluded from the board and shown in History instead.
+alter table public.cards add column if not exists archived_at timestamptz;
+
+create index if not exists cards_archived_at_idx on public.cards (archived_at);
+
 create table if not exists public.attachments (
   id           uuid primary key default gen_random_uuid(),
   card_id      uuid not null references public.cards(id) on delete cascade,

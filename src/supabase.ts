@@ -38,6 +38,9 @@ export interface CardRow {
   notes: string
   requested_at: string | null
   created_at: string
+  due_date: string | null
+  due_date_set_at: string | null
+  archived_at: string | null
 }
 
 export interface AttachmentRow {

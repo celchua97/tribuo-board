@@ -1,7 +1,8 @@
 import { useMemo, useState, type DragEvent } from 'react'
 import type { Card, Status } from './types'
 import { STATUSES } from './types'
-import { createCard, openIdentityPicker, setStatus, useBoard, userById } from './store'
+import { createCard, openIdentityPicker, restoreCard, setStatus, useBoard, userById } from './store'
+import { formatDueDate, formatMonthLabel, formatPickup, formatShortDate, isDueSoon, isOverdue, pickupDays } from './dates'
 import logoUrl from './assets/tribuo-logo.svg'
 import UserBadge from './components/UserBadge'
 import Onboarding from './components/Onboarding'
@@ -21,9 +22,11 @@ export default function App() {
   const [requesterFilter, setRequesterFilter] = useState<FilterUser>('all')
   const [picFilter, setPicFilter] = useState<FilterUser>('all')
   const [mineOnly, setMineOnly] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
 
   const filtered = useMemo(() => {
     return cards.filter((c) => {
+      if (c.archivedAt) return false
       if (statusFilter !== 'all' && c.status !== statusFilter) return false
       if (requesterFilter !== 'all' && c.request?.requesterId !== requesterFilter) return false
       if (picFilter !== 'all' && c.request?.picId !== picFilter) return false
@@ -46,6 +49,21 @@ export default function App() {
     }
     return map
   }, [filtered])
+
+  const archivedCards = useMemo(() => cards.filter((c) => c.archivedAt), [cards])
+
+  const archivedByMonth = useMemo(() => {
+    const byKey = new Map<string, Card[]>()
+    for (const c of archivedCards) {
+      const d = new Date(c.createdAt)
+      const key = `${d.getFullYear()}-${d.getMonth()}`
+      if (!byKey.has(key)) byKey.set(key, [])
+      byKey.get(key)!.push(c)
+    }
+    return [...byKey.entries()]
+      .sort(([a], [b]) => (a < b ? 1 : -1))
+      .map(([key, monthCards]) => ({ key, label: formatMonthLabel(monthCards[0].createdAt), cards: monthCards }))
+  }, [archivedCards])
 
   if (!board.configured) return <SetupNeeded />
   if (!board.ready) return <Loading />
@@ -161,6 +179,35 @@ export default function App() {
         ))}
       </div>
 
+      {archivedCards.length > 0 && (
+        <div className="history-section">
+          <button
+            type="button"
+            className="history-toggle"
+            onClick={() => setHistoryOpen((v) => !v)}
+            aria-expanded={historyOpen}
+          >
+            <span className={`history-caret${historyOpen ? ' open' : ''}`} aria-hidden="true">
+              ▸
+            </span>
+            History
+            <span className="count">{archivedCards.length}</span>
+          </button>
+          {historyOpen && (
+            <div className="history-body">
+              {archivedByMonth.map((group) => (
+                <div className="history-group" key={group.key}>
+                  <div className="history-month">{group.label}</div>
+                  {group.cards.map((c) => (
+                    <HistoryRow key={c.id} card={c} onOpen={() => setOpenCardId(c.id)} />
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {openCard && (
         <CardModal
           card={openCard}
@@ -216,6 +263,8 @@ function CardTile({
 }) {
   const requester = userById(card.request?.requesterId)
   const pic = userById(card.request?.picId)
+  const overdue = card.dueDate ? isOverdue(card.dueDate, card.status) : false
+  const dueSoon = card.dueDate ? isDueSoon(card.dueDate, card.status) : false
   return (
     <div
       className={`card${dragging ? ' dragging' : ''}${pic ? ' has-request' : ''}`}
@@ -231,6 +280,18 @@ function CardTile({
       <div className="card-drag-handle" aria-hidden="true">⋮⋮</div>
       <div className="card-title">{card.title}</div>
       {card.description && <div className="card-desc">{card.description}</div>}
+      {(card.dueDate || card.dueDateSetAt) && (
+        <div className="card-meta">
+          {card.dueDate && (
+            <span className={`due-pill${overdue ? ' overdue' : dueSoon ? ' due-soon' : ''}`}>
+              Due {formatDueDate(card.dueDate)}
+            </span>
+          )}
+          {card.dueDateSetAt && (
+            <span className="pickup-pill">{formatPickup(pickupDays(card.createdAt, card.dueDateSetAt))}</span>
+          )}
+        </div>
+      )}
       {card.request && (
         <div className="card-tags" onClick={(e) => e.stopPropagation()}>
           <UserBadge user={requester} role="Requester" size="sm" />
@@ -238,6 +299,33 @@ function CardTile({
           <UserBadge user={pic} role="PIC" size="sm" />
         </div>
       )}
+    </div>
+  )
+}
+
+function HistoryRow({ card, onOpen }: { card: Card; onOpen: () => void }) {
+  return (
+    <div
+      className="history-row"
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onOpen()}
+    >
+      <span className="history-row-title">{card.title}</span>
+      <span className="history-row-date">
+        Archived {card.archivedAt ? formatShortDate(card.archivedAt) : ''}
+      </span>
+      <button
+        type="button"
+        className="link-btn"
+        onClick={(e) => {
+          e.stopPropagation()
+          restoreCard(card.id)
+        }}
+      >
+        Restore
+      </button>
     </div>
   )
 }

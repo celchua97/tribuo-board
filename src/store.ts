@@ -76,6 +76,9 @@ function mapCard(r: CardRow): Card {
     description: r.description ?? '',
     status: r.status as Status,
     createdAt: Date.parse(r.created_at),
+    dueDate: r.due_date,
+    dueDateSetAt: r.due_date_set_at ? Date.parse(r.due_date_set_at) : null,
+    archivedAt: r.archived_at ? Date.parse(r.archived_at) : null,
   }
   if (r.requester_id) {
     card.request = {
@@ -260,6 +263,54 @@ export async function updateCard(
 
 export function setStatus(id: string, status: Status) {
   return updateCard(id, { status })
+}
+
+/**
+ * Due date is freely adjustable by anyone at any time. due_date_set_at is
+ * only stamped the first time a due date goes from unset -> set, so it stays
+ * a stable "time to pickup" marker even as the date itself gets rescheduled.
+ */
+export async function setDueDate(id: string, dueDate: string | null): Promise<void> {
+  if (!supabase) return
+  const client = supabase
+  const card = state.cards.find((c) => c.id === id)
+  const firstAssignment = Boolean(dueDate) && card && !card.dueDateSetAt
+  const dueDateSetAtIso = firstAssignment ? new Date().toISOString() : null
+  const patch: { due_date: string | null; due_date_set_at?: string } = { due_date: dueDate }
+  if (dueDateSetAtIso) patch.due_date_set_at = dueDateSetAtIso
+
+  await writeCards(
+    state.cards.map((c) =>
+      c.id === id
+        ? { ...c, dueDate, dueDateSetAt: dueDateSetAtIso ? Date.parse(dueDateSetAtIso) : c.dueDateSetAt }
+        : c,
+    ),
+    () => client.from('cards').update(patch).eq('id', id),
+    'Failed to update due date, re-syncing from server',
+  )
+}
+
+/** Move a Done card into History. */
+export async function archiveCard(id: string): Promise<void> {
+  if (!supabase) return
+  const client = supabase
+  const archived_at = new Date().toISOString()
+  await writeCards(
+    state.cards.map((c) => (c.id === id ? { ...c, archivedAt: Date.parse(archived_at) } : c)),
+    () => client.from('cards').update({ archived_at }).eq('id', id),
+    'Failed to archive card, re-syncing from server',
+  )
+}
+
+/** Bring an archived card back onto the board. */
+export async function restoreCard(id: string): Promise<void> {
+  if (!supabase) return
+  const client = supabase
+  await writeCards(
+    state.cards.map((c) => (c.id === id ? { ...c, archivedAt: null } : c)),
+    () => client.from('cards').update({ archived_at: null }).eq('id', id),
+    'Failed to restore card, re-syncing from server',
+  )
 }
 
 export async function deleteCard(id: string): Promise<void> {

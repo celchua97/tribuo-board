@@ -2,12 +2,16 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import type { Attachment, Card, Status, User } from '../types'
 import { STATUSES } from '../types'
 import { textOn } from '../colors'
+import { formatPickup, formatShortDate, pickupDays } from '../dates'
 import {
   addLinkAttachment,
+  archiveCard,
   attachmentsFor,
   clearRequest,
   deleteCard,
   removeAttachment,
+  restoreCard,
+  setDueDate,
   submitRequest,
   updateCard,
   uploadFileAttachment,
@@ -123,6 +127,34 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
           ))}
         </div>
 
+        <label className="field-label" htmlFor="card-due-date">
+          Due date
+        </label>
+        <div className="due-date-row">
+          <input
+            id="card-due-date"
+            type="date"
+            className="due-date-input"
+            value={card.dueDate ?? ''}
+            onChange={(e) => setDueDate(card.id, e.target.value || null)}
+          />
+          {card.dueDate && (
+            <button
+              type="button"
+              className="link-btn"
+              onClick={() => setDueDate(card.id, null)}
+              title="Clear due date"
+            >
+              Clear
+            </button>
+          )}
+          {card.dueDateSetAt && (
+            <span className="pickup-pill">
+              {formatPickup(pickupDays(card.createdAt, card.dueDateSetAt))}
+            </span>
+          )}
+        </div>
+
         <label className="field-label">Log</label>
         <textarea
           className="text-area"
@@ -222,6 +254,7 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
                 <span className="arrow">→</span>
                 <UserBadge user={pic} role="PIC" showName />
               </div>
+              <p className="request-meta">Requested on {formatShortDate(card.request.createdAt)}</p>
               {card.request.notes && <p className="request-notes">{card.request.notes}</p>}
             </div>
           ) : showRequestForm ? (
@@ -269,6 +302,21 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
         </div>
 
         <div className="modal-footer">
+          {card.archivedAt ? (
+            <div className="archive-status">
+              <span>Archived on {formatShortDate(card.archivedAt)}</span>
+              <button type="button" className="link-btn" onClick={() => restoreCard(card.id)}>
+                Restore to board
+              </button>
+            </div>
+          ) : (
+            card.status === 'done' && (
+              <button type="button" className="btn-outline archive-btn" onClick={() => archiveCard(card.id)}>
+                Move to History
+              </button>
+            )
+          )}
+
           {confirmDelete ? (
             <div className="confirm-delete">
               <span>Delete this card? This can’t be undone.</span>
