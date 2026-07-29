@@ -9,7 +9,7 @@ export const PALETTE: { hex: string; name: string }[] = [
   { hex: '#2D9CDB', name: 'Sky' },
   { hex: '#6C5CE7', name: 'Iris' },
   { hex: '#D6336C', name: 'Rose' },
-  { hex: '#00A896', name: 'Teal' },
+  { hex: '#00FFFF', name: 'Teal' },
   { hex: '#8D6E63', name: 'Clay' },
   { hex: '#F25F5C', name: 'Coral' },
   { hex: '#5F6CAF', name: 'Indigo' },
