@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import type { Attachment, Card, Status, User } from '../types'
 import { STATUSES } from '../types'
-import { textOn } from '../colors'
+import { MULTI_PIC_COLOR, textOn } from '../colors'
 import { formatShortDate } from '../dates'
 import {
   addLinkAttachment,
@@ -30,7 +30,7 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
   const [title, setTitle] = useState(card.title)
   const [description, setDescription] = useState(card.description)
   const [showRequestForm, setShowRequestForm] = useState(false)
-  const [picId, setPicId] = useState<string>(users.find((u) => u.id !== currentUser.id)?.id ?? '')
+  const [picIds, setPicIds] = useState<string[]>([])
   const [notes, setNotes] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [showLinkForm, setShowLinkForm] = useState(false)
@@ -50,14 +50,19 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
   }, [card.title, card.description])
 
   const requester = userById(card.request?.requesterId)
-  const pic = userById(card.request?.picId)
+  const pics = (card.request?.picIds ?? []).map(userById).filter((u): u is User => Boolean(u))
 
   const saveDetails = () => updateCard(card.id, { title, description })
 
+  const togglePic = (id: string) => {
+    setPicIds((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]))
+  }
+
   const submit = () => {
-    if (!picId) return
-    submitRequest(card.id, currentUser.id, picId, notes)
+    if (picIds.length === 0) return
+    submitRequest(card.id, currentUser.id, picIds, notes)
     setShowRequestForm(false)
+    setPicIds([])
     setNotes('')
   }
 
@@ -247,32 +252,49 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
               <div className="request-row">
                 <UserBadge user={requester} role="Requester" showName />
                 <span className="arrow">→</span>
-                <UserBadge user={pic} role="PIC" showName />
+                {pics.length > 0 ? (
+                  <span
+                    className={`pic-group${pics.length > 1 ? ' multi' : ''}`}
+                    title={pics.length > 1 ? `${pics.length} PICs assigned` : undefined}
+                  >
+                    {pics.map((p) => (
+                      <UserBadge key={p.id} user={p} role="PIC" showName />
+                    ))}
+                  </span>
+                ) : (
+                  <UserBadge role="PIC" showName />
+                )}
               </div>
               <p className="request-meta">Requested on {formatShortDate(card.request.createdAt)}</p>
               {card.request.notes && <p className="request-notes">{card.request.notes}</p>}
             </div>
           ) : showRequestForm ? (
             <div className="request-form">
-              <label className="field-label">PIC</label>
+              <label className="field-label">PIC{picIds.length > 1 ? 's' : ''}</label>
               <div className="pic-picker">
                 {users.map((u) => (
                   <button
                     key={u.id}
                     type="button"
-                    className={`pic-choice${picId === u.id ? ' selected' : ''}`}
+                    className={`pic-choice${picIds.includes(u.id) ? ' selected' : ''}`}
                     style={
-                      picId === u.id
+                      picIds.includes(u.id)
                         ? { background: u.color, color: textOn(u.color), borderColor: u.color }
                         : { borderColor: u.color }
                     }
-                    onClick={() => setPicId(u.id)}
+                    onClick={() => togglePic(u.id)}
                   >
                     <span className="dot" style={{ background: u.color }} />
                     {u.name}
                   </button>
                 ))}
               </div>
+              {picIds.length > 1 && (
+                <p className="pic-multi-hint">
+                  <span className="dot" style={{ background: MULTI_PIC_COLOR }} />
+                  Shown as shared (yellow) on the board with {picIds.length} PICs assigned.
+                </p>
+              )}
               <textarea
                 className="text-area"
                 placeholder="Notes / context for this request…"
@@ -281,7 +303,7 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
                 rows={2}
               />
               <div className="row-actions">
-                <button className="btn-primary" disabled={!picId} onClick={submit}>
+                <button className="btn-primary" disabled={picIds.length === 0} onClick={submit}>
                   Submit request
                 </button>
                 <button className="btn-ghost" onClick={() => setShowRequestForm(false)}>
