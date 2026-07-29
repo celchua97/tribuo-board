@@ -34,7 +34,7 @@ export interface CardRow {
   description: string
   status: string
   requester_id: string | null
-  pic_id: string | null
+  pic_ids: string[] | null
   notes: string
   requested_at: string | null
   created_at: string
