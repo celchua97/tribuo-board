@@ -17,6 +17,13 @@ export const PALETTE: { hex: string; name: string }[] = [
   { hex: '#C9184A', name: 'Cherry' },
 ]
 
+/**
+ * Reserved indicator color — not a user identity color, never selectable at
+ * onboarding. Shown on a card/badge whenever more than one PIC is assigned,
+ * since a single identity swatch can no longer represent "who's on it".
+ */
+export const MULTI_PIC_COLOR = '#FFD400'
+
 /** Pick a readable text color (black/white) for a given background hex. */
 export function textOn(hex: string): string {
   const h = hex.replace('#', '')
