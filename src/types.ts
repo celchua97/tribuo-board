@@ -16,7 +16,8 @@ export interface User {
 
 export interface CardRequest {
   requesterId: string
-  picId: string
+  /** One or more people responsible for the request. */
+  picIds: string[]
   notes: string
   createdAt: number
 }
