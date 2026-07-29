@@ -22,13 +22,41 @@ create table if not exists public.cards (
   status       text not null default 'todo',
   -- A request is embedded on the card: it exists once requester_id is set.
   requester_id uuid references public.users(id) on delete set null,
-  pic_id       uuid references public.users(id) on delete set null,
   notes        text not null default '',
   requested_at timestamptz,
   created_at   timestamptz not null default now()
 );
 
 create index if not exists cards_status_idx on public.cards (status);
+
+-- Multi-PIC support: a request can now be assigned to more than one person.
+-- Migrate the old single pic_id column into a pic_ids array, then drop it.
+do $$
+begin
+  alter table public.cards add column if not exists pic_ids uuid[] not null default '{}';
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'cards' and column_name = 'pic_id'
+  ) then
+    update public.cards set pic_ids = array[pic_id] where pic_id is not null and pic_ids = '{}';
+    alter table public.cards drop column pic_id;
+  end if;
+end $$;
+
+-- Arrays can't carry a normal foreign key, so mirror the old
+-- "on delete set null" behaviour with a trigger: removing a user drops them
+-- out of any pic_ids array that references them.
+create or replace function public.strip_deleted_user_from_pic_ids() returns trigger as $$
+begin
+  update public.cards set pic_ids = array_remove(pic_ids, old.id) where old.id = any(pic_ids);
+  return old;
+end;
+$$ language plpgsql;
+
+drop trigger if exists trg_strip_deleted_user_from_pic_ids on public.users;
+create trigger trg_strip_deleted_user_from_pic_ids
+  before delete on public.users
+  for each row execute function public.strip_deleted_user_from_pic_ids();
 
 -- Due date: settable/adjustable by anyone at any time. due_date_set_at is
 -- stamped the FIRST time a due date is assigned (not on later adjustments) —

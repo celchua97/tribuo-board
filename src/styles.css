@@ -15,6 +15,7 @@
   --st-in_progress: #e8836b; /* coral */
   --st-review: #3d43c4; /* brand blue */
   --st-done: #3f7d4e; /* deep green */
+  --multi-pic: #ffd400; /* shown when a card/request has more than one PIC */
 }
 
 * {
@@ -354,6 +355,18 @@ button {
 .arrow-sm,
 .arrow {
   color: var(--muted);
+}
+
+/* ---- Multiple-PIC grouping ---- */
+.pic-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.pic-group.multi {
+  padding: 3px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px var(--multi-pic);
 }
 
 /* ---- Due date / pickup pills ---- */
@@ -760,6 +773,14 @@ button {
   padding: 6px 12px;
   font-size: 13px;
   font-weight: 600;
+}
+.pic-multi-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--muted);
 }
 .request-form .text-area {
   margin-top: 10px;
