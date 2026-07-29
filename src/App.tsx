@@ -1,6 +1,7 @@
 import { useMemo, useState, type DragEvent } from 'react'
-import type { Card, Status } from './types'
+import type { Card, Status, User } from './types'
 import { STATUSES } from './types'
+import { MULTI_PIC_COLOR } from './colors'
 import { createCard, openIdentityPicker, restoreCard, setStatus, useBoard, userById } from './store'
 import {
   formatDueCountdown,
@@ -36,10 +37,11 @@ export default function App() {
       if (c.archivedAt) return false
       if (statusFilter !== 'all' && c.status !== statusFilter) return false
       if (requesterFilter !== 'all' && c.request?.requesterId !== requesterFilter) return false
-      if (picFilter !== 'all' && c.request?.picId !== picFilter) return false
+      if (picFilter !== 'all' && !c.request?.picIds.includes(picFilter)) return false
       if (mineOnly) {
         const mine =
-          c.request?.requesterId === currentUserId || c.request?.picId === currentUserId
+          c.request?.requesterId === currentUserId ||
+          (currentUserId ? c.request?.picIds.includes(currentUserId) : false)
         if (!mine) return false
       }
       return true
@@ -269,13 +271,14 @@ function CardTile({
   onDragEnd: () => void
 }) {
   const requester = userById(card.request?.requesterId)
-  const pic = userById(card.request?.picId)
+  const pics = (card.request?.picIds ?? []).map(userById).filter((u): u is User => Boolean(u))
+  const picIndicatorColor = pics.length > 1 ? MULTI_PIC_COLOR : pics[0]?.color
   const overdue = card.dueDate ? isOverdue(card.dueDate, card.status) : false
   const dueSoon = card.dueDate ? isDueSoon(card.dueDate, card.status) : false
   return (
     <div
-      className={`card${dragging ? ' dragging' : ''}${pic ? ' has-request' : ''}`}
-      style={pic ? { borderLeftColor: pic.color } : undefined}
+      className={`card${dragging ? ' dragging' : ''}${picIndicatorColor ? ' has-request' : ''}`}
+      style={picIndicatorColor ? { borderLeftColor: picIndicatorColor } : undefined}
       role="button"
       tabIndex={0}
       draggable
@@ -291,7 +294,18 @@ function CardTile({
         <div className="card-tags" onClick={(e) => e.stopPropagation()}>
           <UserBadge user={requester} role="Requester" size="sm" />
           <span className="arrow-sm">→</span>
-          <UserBadge user={pic} role="PIC" size="sm" />
+          {pics.length > 0 ? (
+            <span
+              className={`pic-group${pics.length > 1 ? ' multi' : ''}`}
+              title={pics.length > 1 ? `${pics.length} PICs assigned` : undefined}
+            >
+              {pics.map((p) => (
+                <UserBadge key={p.id} user={p} role="PIC" size="sm" />
+              ))}
+            </span>
+          ) : (
+            <UserBadge role="PIC" size="sm" />
+          )}
         </div>
       )}
       {card.dueDate && (
