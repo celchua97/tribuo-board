@@ -74,23 +74,27 @@ export default function UserBadge({ user, role, size = 'md', showName = false }:
             <ul>
               {requests.map((c) => {
                 const asRequester = c.request?.requesterId === user.id
-                const counterpartId = asRequester ? c.request?.picId : c.request?.requesterId
-                const counterpart = userById(counterpartId)
+                const counterpartIds = asRequester
+                  ? c.request?.picIds ?? []
+                  : c.request?.requesterId
+                    ? [c.request.requesterId]
+                    : []
+                const counterparts = counterpartIds.map(userById).filter((u): u is User => Boolean(u))
                 return (
                   <li key={c.id}>
                     <span className="req-title">{c.title}</span>
                     <span className="req-meta">
                       {asRequester ? 'requester' : 'PIC'}
-                      {counterpart && (
-                        <>
+                      {counterparts.map((counterpart) => (
+                        <span key={counterpart.id}>
                           {' · '}
                           <span
                             className="mini-dot"
                             style={{ background: counterpart.color }}
                           />
                           {counterpart.name}
-                        </>
-                      )}
+                        </span>
+                      ))}
                     </span>
                   </li>
                 )
