@@ -51,11 +51,22 @@ export interface Attachment {
   createdAt: number
 }
 
+export interface Comment {
+  id: string
+  cardId: string
+  /** Null if the author was later removed from the board. */
+  authorId: string | null
+  body: string
+  createdAt: number
+}
+
 export interface BoardState {
   users: User[]
   cards: Card[]
   /** Keyed by card id. */
   attachments: Record<string, Attachment[]>
+  /** Keyed by card id. */
+  comments: Record<string, Comment[]>
   currentUserId: string | null
   /** False until the first load from Supabase completes. */
   ready: boolean
