@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import type { Attachment, BoardState, Card, Status, User } from './types'
+import type { Attachment, BoardState, Card, Comment, Status, User } from './types'
 import {
   supabase,
   isConfigured,
@@ -7,6 +7,7 @@ import {
   MAX_ATTACHMENT_BYTES,
   type AttachmentRow,
   type CardRow,
+  type CommentRow,
   type UserRow,
 } from './supabase'
 
@@ -46,6 +47,7 @@ let state: BoardState = {
   users: [],
   cards: [],
   attachments: {},
+  comments: {},
   currentUserId: loadCurrentUserId(),
   ready: false,
   configured: isConfigured,
@@ -105,14 +107,25 @@ function mapAttachment(r: AttachmentRow): Attachment {
   }
 }
 
+function mapComment(r: CommentRow): Comment {
+  return {
+    id: r.id,
+    cardId: r.card_id,
+    authorId: r.author_id,
+    body: r.body,
+    createdAt: Date.parse(r.created_at),
+  }
+}
+
 // ---- Hydration + realtime ----
 
 async function refetch() {
   if (!supabase) return
-  const [usersRes, cardsRes, attachmentsRes] = await Promise.all([
+  const [usersRes, cardsRes, attachmentsRes, commentsRes] = await Promise.all([
     supabase.from('users').select('*').order('created_at', { ascending: true }),
     supabase.from('cards').select('*').order('created_at', { ascending: false }),
     supabase.from('attachments').select('*').order('created_at', { ascending: true }),
+    supabase.from('comments').select('*').order('created_at', { ascending: true }),
   ])
 
   const users = (usersRes.data as UserRow[] | null)?.map(mapUser) ?? state.users
@@ -127,6 +140,16 @@ async function refetch() {
     }
     attachments = grouped
   }
+  const commentRows = (commentsRes.data as CommentRow[] | null)?.map(mapComment)
+  let comments = state.comments
+  if (commentRows) {
+    const grouped: Record<string, Comment[]> = {}
+    for (const c of commentRows) {
+      if (!grouped[c.cardId]) grouped[c.cardId] = []
+      grouped[c.cardId].push(c)
+    }
+    comments = grouped
+  }
 
   // Drop a stale current-user id only if that user was actually removed from a
   // non-empty user list (avoids nulling it out on a transient empty response).
@@ -135,7 +158,7 @@ async function refetch() {
     state.currentUserId && users.length > 0 && !stillExists ? null : state.currentUserId
   if (currentUserId !== state.currentUserId) saveCurrentUserId(currentUserId)
 
-  set({ users, cards, attachments, currentUserId, ready: true })
+  set({ users, cards, attachments, comments, currentUserId, ready: true })
 }
 
 let started = false
@@ -154,6 +177,7 @@ export function initStore() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => refetch())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'cards' }, () => refetch())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'attachments' }, () => refetch())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, () => refetch())
     .subscribe()
 }
 
@@ -337,6 +361,10 @@ export async function deleteCard(id: string): Promise<void> {
     const { [id]: _omit, ...rest } = state.attachments
     set({ attachments: rest })
   }
+  if (state.comments[id]) {
+    const { [id]: _omit, ...rest } = state.comments
+    set({ comments: rest })
+  }
 }
 
 export async function submitRequest(
@@ -497,5 +525,56 @@ export async function removeAttachment(attachment: Attachment): Promise<void> {
     if (storageError) {
       console.error('Failed to delete storage object (row already removed):', storageError.message)
     }
+  }
+}
+
+// ---- Comments ----
+
+export function commentsFor(cardId: string): Comment[] {
+  return state.comments[cardId] ?? []
+}
+
+export async function addComment(
+  cardId: string,
+  authorId: string,
+  body: string,
+): Promise<{ error?: string }> {
+  if (!supabase) return { error: 'Not configured' }
+  const trimmed = body.trim()
+  if (!trimmed) return { error: 'Write something first.' }
+  const { data, error } = await supabase
+    .from('comments')
+    .insert({ card_id: cardId, author_id: authorId, body: trimmed })
+    .select()
+    .single()
+  if (error) {
+    console.error('Failed to post comment:', error.message)
+    return { error: error.message }
+  }
+  if (data) {
+    const comment = mapComment(data as CommentRow)
+    set({
+      comments: {
+        ...state.comments,
+        [cardId]: [...(state.comments[cardId] ?? []), comment],
+      },
+    })
+  }
+  return {}
+}
+
+export async function removeComment(comment: Comment): Promise<void> {
+  if (!supabase) return
+  const client = supabase
+  set({
+    comments: {
+      ...state.comments,
+      [comment.cardId]: (state.comments[comment.cardId] ?? []).filter((c) => c.id !== comment.id),
+    },
+  })
+  const { error } = await client.from('comments').delete().eq('id', comment.id)
+  if (error) {
+    console.error('Failed to remove comment, re-syncing from server:', error.message)
+    refetch()
   }
 }

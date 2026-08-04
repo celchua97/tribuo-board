@@ -55,5 +55,13 @@ export interface AttachmentRow {
   created_at: string
 }
 
+export interface CommentRow {
+  id: string
+  card_id: string
+  author_id: string | null
+  body: string
+  created_at: string
+}
+
 export const ATTACHMENTS_BUCKET = 'card-attachments'
 export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024

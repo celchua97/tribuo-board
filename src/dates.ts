@@ -60,3 +60,12 @@ export function formatMonthLabel(timestamp: number): string {
 export function formatShortDate(timestamp: number): string {
   return new Date(timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
+
+export function formatShortDateTime(timestamp: number): string {
+  return new Date(timestamp).toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+}
