@@ -87,6 +87,16 @@ create table if not exists public.attachments (
 
 create index if not exists attachments_card_id_idx on public.attachments (card_id);
 
+create table if not exists public.comments (
+  id         uuid primary key default gen_random_uuid(),
+  card_id    uuid not null references public.cards(id) on delete cascade,
+  author_id  uuid references public.users(id) on delete set null,
+  body       text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists comments_card_id_idx on public.comments (card_id);
+
 -- ---------- Storage bucket for file attachments ----------
 
 insert into storage.buckets (id, name, public, file_size_limit)
@@ -100,6 +110,7 @@ on conflict (id) do nothing;
 alter table public.users enable row level security;
 alter table public.cards enable row level security;
 alter table public.attachments enable row level security;
+alter table public.comments enable row level security;
 
 drop policy if exists "anon full access to users" on public.users;
 create policy "anon full access to users"
@@ -114,6 +125,11 @@ create policy "anon full access to cards"
 drop policy if exists "anon full access to attachments" on public.attachments;
 create policy "anon full access to attachments"
   on public.attachments for all
+  using (true) with check (true);
+
+drop policy if exists "anon full access to comments" on public.comments;
+create policy "anon full access to comments"
+  on public.comments for all
   using (true) with check (true);
 
 drop policy if exists "anon full access to card-attachments storage" on storage.objects;
@@ -147,6 +163,13 @@ begin
     where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'attachments'
   ) then
     alter publication supabase_realtime add table public.attachments;
+  end if;
+
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'comments'
+  ) then
+    alter publication supabase_realtime add table public.comments;
   end if;
 end $$;
 
