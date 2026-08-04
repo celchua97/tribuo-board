@@ -1,15 +1,18 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
-import type { Attachment, Card, Status, User } from '../types'
+import type { Attachment, Card, Comment, Status, User } from '../types'
 import { STATUSES } from '../types'
 import { MULTI_PIC_COLOR, textOn } from '../colors'
-import { formatShortDate } from '../dates'
+import { formatShortDate, formatShortDateTime } from '../dates'
 import {
+  addComment,
   addLinkAttachment,
   archiveCard,
   attachmentsFor,
   clearRequest,
+  commentsFor,
   deleteCard,
   removeAttachment,
+  removeComment,
   restoreCard,
   setDueDate,
   submitRequest,
@@ -39,6 +42,8 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
   const [uploading, setUploading] = useState(false)
   const [attachmentError, setAttachmentError] = useState('')
   const [previewAttachment, setPreviewAttachment] = useState<Attachment | null>(null)
+  const [commentBody, setCommentBody] = useState('')
+  const [commentError, setCommentError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Re-sync if the card changes under us (e.g. another user edits it via
@@ -94,6 +99,18 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
     setLinkUrl('')
     setLinkLabel('')
     setAttachmentError('')
+  }
+
+  const comments = commentsFor(card.id)
+
+  const submitComment = async () => {
+    const { error } = await addComment(card.id, currentUser.id, commentBody)
+    if (error) {
+      setCommentError(error)
+      return
+    }
+    setCommentBody('')
+    setCommentError('')
   }
 
   return (
@@ -318,6 +335,35 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
           )}
         </div>
 
+        <div className="comments-section">
+          <span className="field-label">Comments</span>
+
+          {comments.length > 0 && (
+            <ul className="comment-list">
+              {comments.map((c) => (
+                <CommentRow key={c.id} comment={c} onRemove={() => removeComment(c)} />
+              ))}
+            </ul>
+          )}
+
+          {commentError && <div className="attachment-error">{commentError}</div>}
+
+          <div className="comment-form">
+            <textarea
+              className="text-area"
+              placeholder="Write a comment…"
+              value={commentBody}
+              onChange={(e) => setCommentBody(e.target.value)}
+              rows={2}
+            />
+            <div className="row-actions">
+              <button className="btn-primary" disabled={!commentBody.trim()} onClick={submitComment}>
+                Post comment
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div className="modal-footer">
           {card.archivedAt ? (
             <div className="archive-status">
@@ -413,6 +459,25 @@ function AttachmentRow({
       )}
       <UserBadge user={addedBy} role="Added by" size="sm" />
       <button className="icon-btn attachment-remove" onClick={onRemove} aria-label="Remove attachment">
+        ×
+      </button>
+    </li>
+  )
+}
+
+function CommentRow({ comment, onRemove }: { comment: Comment; onRemove: () => void }) {
+  const author = userById(comment.authorId)
+  return (
+    <li className="comment-row">
+      <UserBadge user={author} size="sm" />
+      <div className="comment-body-wrap">
+        <div className="comment-meta">
+          <span className="comment-author">{author?.name ?? 'Removed user'}</span>
+          <span className="comment-time">{formatShortDateTime(comment.createdAt)}</span>
+        </div>
+        <p className="comment-body">{comment.body}</p>
+      </div>
+      <button className="icon-btn comment-remove" onClick={onRemove} aria-label="Remove comment">
         ×
       </button>
     </li>
