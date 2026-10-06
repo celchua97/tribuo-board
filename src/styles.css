@@ -1,21 +1,25 @@
 :root {
-  /* CAREFUL palette */
-  --bg: #eae5db; /* cream page */
-  --surface: #fcfaf5; /* warm white cards */
-  --border: #ded6c6; /* warm tan */
-  --text: #1a1613; /* warm near-black */
-  --muted: #7c7264; /* warm grey */
-  --brand: #3d43c4; /* tribuo royal blue */
-  --maroon: #8a1b10; /* primary action */
-  --maroon-dark: #6f150c;
-  --coral: #e8836b; /* accent */
-  --shadow: 0 1px 3px rgba(60, 40, 20, 0.06), 0 4px 12px rgba(60, 40, 20, 0.05);
+  /* Tribuo brandbook palette — primary + secondary, strictly official hexes.
+     Neutrals (border/muted/shadow) are tints/shades of brand black, not new hues. */
+  --bg: #f7f3eb; /* brand off-white */
+  --surface: #ffffff; /* brand white */
+  --border: rgba(5, 5, 5, 0.12);
+  --border-hover: rgba(5, 5, 5, 0.26);
+  --text: #050505; /* brand black */
+  --muted: rgba(5, 5, 5, 0.56);
+  --brand: #3750ab; /* brand blue */
+  --maroon: #980000; /* brand crimson — primary action */
+  --maroon-dark: #730000;
+  --coral: #fd947a; /* brand coral — accent */
+  --danger: #980000;
+  --danger-dark: #730000;
+  --shadow: 0 1px 3px rgba(5, 5, 5, 0.07), 0 4px 12px rgba(5, 5, 5, 0.06);
   --radius: 10px;
-  --st-todo: #8c8073; /* warm slate */
-  --st-in_progress: #e8836b; /* coral */
-  --st-review: #3d43c4; /* brand blue */
-  --st-done: #3f7d4e; /* deep green */
-  --multi-pic: #ffd400; /* shown when a card/request has more than one PIC */
+  --st-todo: #eeafa8; /* brand blush */
+  --st-in_progress: #ff751f; /* brand orange */
+  --st-review: #3750ab; /* brand blue */
+  --st-done: #6f9fc8; /* brand dusty blue */
+  --multi-pic: #f9c339; /* brand yellow — shown when a card/request has more than one PIC */
 }
 
 * {
@@ -24,7 +28,7 @@
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: 'Bricolage Grotesque', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
@@ -69,7 +73,7 @@ button {
   color: var(--muted);
 }
 .switch-btn:hover {
-  border-color: #b3a58f;
+  border-color: var(--border-hover);
   color: var(--text);
 }
 
@@ -135,7 +139,7 @@ button {
 .text-input:focus,
 .text-area:focus {
   outline: none;
-  border-color: #b3a58f;
+  border-color: var(--border-hover);
 }
 .new-card .text-input {
   min-width: 260px;
@@ -167,7 +171,7 @@ button {
   width: 100%;
 }
 .btn-outline:hover {
-  border-color: #b3a58f;
+  border-color: var(--border-hover);
   color: var(--text);
 }
 .btn-ghost {
@@ -178,7 +182,7 @@ button {
   font-weight: 600;
 }
 .btn-danger {
-  background: #b3261e;
+  background: var(--danger);
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -187,7 +191,7 @@ button {
   font-size: 14px;
 }
 .btn-danger:hover {
-  background: #911d17;
+  background: var(--danger-dark);
 }
 .modal-footer {
   margin-top: 20px;
@@ -227,7 +231,7 @@ button {
   padding: 0;
 }
 .link-btn.danger {
-  color: #b3261e;
+  color: var(--danger);
 }
 
 /* ---- Board ---- */
@@ -244,14 +248,14 @@ button {
   transition: background 0.12s, box-shadow 0.12s;
 }
 .column.drag-over {
-  background: rgba(138, 27, 16, 0.05);
+  background: rgba(253, 148, 122, 0.12);
   box-shadow: inset 0 0 0 2px var(--coral);
 }
 .column-head {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -338,7 +342,7 @@ button {
   opacity: 0.55;
 }
 .card-title {
-  font-weight: 600;
+  font-weight: 700;
   font-size: 14px;
 }
 .card-desc {
@@ -391,16 +395,16 @@ button {
   color: var(--muted);
 }
 .due-pill.due-soon {
-  background: rgba(232, 131, 107, 0.18);
-  color: #a1481f;
+  background: rgba(255, 117, 31, 0.16);
+  color: #b34700;
 }
 .due-pill.overdue {
-  background: rgba(179, 38, 30, 0.12);
-  color: #b3261e;
+  background: rgba(152, 0, 0, 0.12);
+  color: var(--danger);
 }
 .pickup-pill {
-  background: rgba(63, 125, 78, 0.14);
-  color: #3f7d4e;
+  background: rgba(111, 159, 200, 0.18);
+  color: #2f5e82;
 }
 .card-due-footer {
   display: flex;
@@ -538,12 +542,15 @@ button {
 }
 .onboard-card h1 {
   margin: 0 0 6px;
-  font-size: 22px;
+  font-size: 24px;
+  font-weight: 800;
 }
 .onboard-sub {
   margin: 0 0 20px;
   color: var(--muted);
-  font-size: 14px;
+  font-family: 'Instrument Serif', serif;
+  font-style: italic;
+  font-size: 17px;
 }
 .swatch-grid {
   display: grid;
@@ -655,13 +662,13 @@ button {
   transition: background 0.12s, border-color 0.12s, box-shadow 0.12s;
 }
 .modal-title-input:hover {
-  border-color: #b3a58f;
+  border-color: var(--border-hover);
 }
 .modal-title-input:focus {
   outline: none;
   background: var(--surface);
   border-color: var(--maroon);
-  box-shadow: 0 0 0 3px rgba(138, 27, 16, 0.12);
+  box-shadow: 0 0 0 3px rgba(152, 0, 0, 0.12);
 }
 .icon-btn {
   background: none;
@@ -706,7 +713,7 @@ button {
 .status-chip.active.st-todo {
   background: var(--st-todo);
   border-color: var(--st-todo);
-  color: #fff;
+  color: var(--text);
 }
 .status-chip.active.st-in_progress {
   background: var(--st-in_progress);
@@ -914,7 +921,7 @@ button {
   padding: 0 2px;
 }
 .attachment-error {
-  color: #b3261e;
+  color: var(--danger);
   font-size: 13px;
   font-weight: 600;
   margin: 8px 0 0;
@@ -1039,27 +1046,38 @@ button {
   gap: 12px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 10px 12px;
-  margin-bottom: 6px;
+  border-left: 4px solid var(--st-done);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 11px 14px;
+  margin-bottom: 8px;
   cursor: pointer;
+  transition: transform 0.08s ease, box-shadow 0.08s ease, border-color 0.08s ease;
 }
 .history-row:hover {
-  border-color: #b3a58f;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(5, 5, 5, 0.08), 0 8px 20px rgba(5, 5, 5, 0.06);
+  border-color: var(--border-hover);
+  border-left-color: var(--st-done);
 }
 .history-row-title {
   flex: 1;
   min-width: 0;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .history-row-date {
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 700;
   color: var(--muted);
+  background: var(--bg);
+  padding: 4px 10px;
+  border-radius: 999px;
   flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 @media (max-width: 1100px) {
@@ -1142,6 +1160,7 @@ button {
 .setup-card h1 {
   margin: 0 0 10px;
   font-size: 22px;
+  font-weight: 800;
 }
 .setup-card p {
   color: var(--muted);
@@ -1172,7 +1191,7 @@ button {
 
 /* ---- Onboarding error ---- */
 .onboard-error {
-  color: #b3261e;
+  color: var(--danger);
   font-size: 13px;
   font-weight: 600;
   margin: 4px 0 2px;
