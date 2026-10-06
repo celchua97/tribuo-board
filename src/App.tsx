@@ -4,12 +4,15 @@ import { STATUSES } from './types'
 import { MULTI_PIC_COLOR } from './colors'
 import { createCard, openIdentityPicker, restoreCard, setStatus, useBoard, userById } from './store'
 import {
+  daysSince,
   formatDueCountdown,
   formatDueDate,
   formatMonthLabel,
   formatShortDate,
   isDueSoon,
   isOverdue,
+  isStaleDone,
+  STALE_DONE_DAYS,
 } from './dates'
 import logoUrl from './assets/tribuo-logo.svg'
 import UserBadge from './components/UserBadge'
@@ -31,6 +34,7 @@ export default function App() {
   const [picFilter, setPicFilter] = useState<FilterUser>('all')
   const [mineOnly, setMineOnly] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [staleDoneOpen, setStaleDoneOpen] = useState(false)
 
   const filtered = useMemo(() => {
     return cards.filter((c) => {
@@ -48,16 +52,26 @@ export default function App() {
     })
   }, [cards, statusFilter, requesterFilter, picFilter, mineOnly, currentUserId])
 
+  // Done cards that have sat finished for 30+ days drop out of the Done
+  // column into a collapsed section below, so a long-lived board doesn't
+  // accumulate clutter — without requiring anyone to manually archive them.
+  const staleDoneCards = useMemo(
+    () => filtered.filter((c) => isStaleDone(c.status, c.doneAt)),
+    [filtered],
+  )
+  const staleDoneIds = useMemo(() => new Set(staleDoneCards.map((c) => c.id)), [staleDoneCards])
+
   const columns = useMemo(() => {
     const map: Record<Status, Card[]> = { todo: [], in_progress: [], review: [], done: [] }
     for (const c of filtered) {
+      if (staleDoneIds.has(c.id)) continue
       // Guard against a status value outside the known set (e.g. stale data,
       // a manual DB edit) — fall back to To-do instead of crashing the board.
       const bucket = map[c.status] ?? map.todo
       bucket.push(c)
     }
     return map
-  }, [filtered])
+  }, [filtered, staleDoneIds])
 
   const archivedCards = useMemo(() => cards.filter((c) => c.archivedAt), [cards])
 
@@ -187,6 +201,30 @@ export default function App() {
           </div>
         ))}
       </div>
+
+      {staleDoneCards.length > 0 && (
+        <div className="history-section">
+          <button
+            type="button"
+            className="history-toggle"
+            onClick={() => setStaleDoneOpen((v) => !v)}
+            aria-expanded={staleDoneOpen}
+          >
+            <span className={`history-caret${staleDoneOpen ? ' open' : ''}`} aria-hidden="true">
+              ▸
+            </span>
+            Older Done ({STALE_DONE_DAYS}+ days)
+            <span className="count">{staleDoneCards.length}</span>
+          </button>
+          {staleDoneOpen && (
+            <div className="history-body">
+              {staleDoneCards.map((c) => (
+                <StaleDoneRow key={c.id} card={c} onOpen={() => setOpenCardId(c.id)} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {archivedCards.length > 0 && (
         <div className="history-section">
@@ -342,6 +380,23 @@ function HistoryRow({ card, onOpen }: { card: Card; onOpen: () => void }) {
       >
         Restore
       </button>
+    </div>
+  )
+}
+
+function StaleDoneRow({ card, onOpen }: { card: Card; onOpen: () => void }) {
+  return (
+    <div
+      className="history-row"
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onOpen()}
+    >
+      <span className="history-row-title">{card.title}</span>
+      <span className="history-row-date">
+        {card.doneAt ? `Done ${formatShortDate(card.doneAt)} · ${daysSince(card.doneAt)} days ago` : ''}
+      </span>
     </div>
   )
 }

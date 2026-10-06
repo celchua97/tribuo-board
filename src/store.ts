@@ -81,6 +81,7 @@ function mapCard(r: CardRow): Card {
     dueDate: r.due_date,
     dueDateSetAt: r.due_date_set_at ? Date.parse(r.due_date_set_at) : null,
     archivedAt: r.archived_at ? Date.parse(r.archived_at) : null,
+    doneAt: r.done_at ? Date.parse(r.done_at) : null,
   }
   if (r.requester_id) {
     card.request = {
@@ -278,9 +279,27 @@ export async function updateCard(
 ): Promise<void> {
   if (!supabase) return
   const client = supabase
+  const card = state.cards.find((c) => c.id === id)
+
+  // done_at is stamped the moment status becomes 'done', and cleared the
+  // moment it moves off Done again — it's "how long has this sat finished",
+  // not a historical record, so later status churn keeps resetting it.
+  const statusChanged = patch.status !== undefined && card && patch.status !== card.status
+  const doneAtIso = statusChanged ? (patch.status === 'done' ? new Date().toISOString() : null) : undefined
+  const dbPatch: Record<string, unknown> = { ...patch }
+  if (doneAtIso !== undefined) dbPatch.done_at = doneAtIso
+
   await writeCards(
-    state.cards.map((c) => (c.id === id ? { ...c, ...patch } : c)),
-    () => client.from('cards').update(patch).eq('id', id),
+    state.cards.map((c) =>
+      c.id === id
+        ? {
+            ...c,
+            ...patch,
+            ...(doneAtIso !== undefined ? { doneAt: doneAtIso ? Date.parse(doneAtIso) : null } : {}),
+          }
+        : c,
+    ),
+    () => client.from('cards').update(dbPatch).eq('id', id),
     'Failed to update card, re-syncing from server',
   )
 }

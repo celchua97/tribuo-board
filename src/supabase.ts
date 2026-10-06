@@ -41,6 +41,7 @@ export interface CardRow {
   due_date: string | null
   due_date_set_at: string | null
   archived_at: string | null
+  done_at: string | null
 }
 
 export interface AttachmentRow {

@@ -70,6 +70,23 @@ alter table public.cards add column if not exists archived_at timestamptz;
 
 create index if not exists cards_archived_at_idx on public.cards (archived_at);
 
+-- Stale-Done: done_at is stamped whenever status becomes 'done' and cleared
+-- whenever it moves off Done again (see strip logic client-side in store.ts).
+-- Once a card has sat Done for 30+ days it's tucked into a collapsed section
+-- below the board, without requiring anyone to manually archive it.
+-- Existing Done cards get done_at = now() on first migrate, so this rollout
+-- doesn't immediately sweep a backlog of old Done cards out of sight.
+do $$
+begin
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'cards' and column_name = 'done_at'
+  ) then
+    alter table public.cards add column done_at timestamptz;
+    update public.cards set done_at = now() where status = 'done' and done_at is null;
+  end if;
+end $$;
+
 create table if not exists public.attachments (
   id           uuid primary key default gen_random_uuid(),
   card_id      uuid not null references public.cards(id) on delete cascade,

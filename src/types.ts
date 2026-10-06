@@ -36,6 +36,8 @@ export interface Card {
   dueDateSetAt: number | null
   /** Set when a Done card is manually moved to History. */
   archivedAt: number | null
+  /** Stamped whenever status becomes 'done'; cleared if it moves off Done again. */
+  doneAt: number | null
 }
 
 export interface Attachment {
