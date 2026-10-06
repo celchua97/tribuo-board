@@ -69,3 +69,15 @@ export function formatShortDateTime(timestamp: number): string {
     minute: '2-digit',
   })
 }
+
+export const STALE_DONE_DAYS = 30
+
+/** Whole days since a timestamp (always >= 0). */
+export function daysSince(timestamp: number): number {
+  return Math.max(0, Math.floor((Date.now() - timestamp) / 86_400_000))
+}
+
+/** A Done card tucked away once it's sat finished for 30+ days (and isn't archived). */
+export function isStaleDone(status: Status, doneAt: number | null): boolean {
+  return status === 'done' && doneAt !== null && daysSince(doneAt) > STALE_DONE_DAYS
+}
