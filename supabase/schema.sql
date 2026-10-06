@@ -74,8 +74,10 @@ create index if not exists cards_archived_at_idx on public.cards (archived_at);
 -- whenever it moves off Done again (see strip logic client-side in store.ts).
 -- Once a card has sat Done for 30+ days it's tucked into a collapsed section
 -- below the board, without requiring anyone to manually archive it.
--- Existing Done cards get done_at = now() on first migrate, so this rollout
--- doesn't immediately sweep a backlog of old Done cards out of sight.
+-- We never tracked the real "marked done" moment before this column existed,
+-- so existing Done cards are backfilled to their created_at as the closest
+-- available stand-in — an old card reads as old, instead of every existing
+-- Done card resetting its clock to the moment this migration ran.
 do $$
 begin
   if not exists (
@@ -83,7 +85,7 @@ begin
     where table_schema = 'public' and table_name = 'cards' and column_name = 'done_at'
   ) then
     alter table public.cards add column done_at timestamptz;
-    update public.cards set done_at = now() where status = 'done' and done_at is null;
+    update public.cards set done_at = created_at where status = 'done' and done_at is null;
   end if;
 end $$;
 
