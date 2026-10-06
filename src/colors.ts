@@ -1,28 +1,29 @@
 /**
  * A curated palette of visually distinct identity colors.
  * Each active user claims exactly one — no two active users share a color.
+ *
+ * Sourced strictly from the Tribuo brandbook's primary + secondary palette
+ * (no off-brand hues) — every entry here is one of those exact hex values.
+ * Brand yellow (#f9c339) is deliberately left out: it's reserved as
+ * MULTI_PIC_COLOR below, so a yellow swatch always and only means "shared".
  */
 export const PALETTE: { hex: string; name: string }[] = [
-  { hex: '#E4572E', name: 'Ember' },
-  { hex: '#F3A712', name: 'Amber' },
-  { hex: '#3CB371', name: 'Fern' },
-  { hex: '#2D9CDB', name: 'Sky' },
-  { hex: '#6C5CE7', name: 'Iris' },
-  { hex: '#D6336C', name: 'Rose' },
-  { hex: '#00FFFF', name: 'Teal' },
-  { hex: '#8D6E63', name: 'Clay' },
-  { hex: '#F25F5C', name: 'Coral' },
-  { hex: '#5F6CAF', name: 'Indigo' },
-  { hex: '#3A7D44', name: 'Pine' },
-  { hex: '#C9184A', name: 'Cherry' },
+  { hex: '#3750AB', name: 'Blue' },
+  { hex: '#FD947A', name: 'Coral' },
+  { hex: '#980000', name: 'Crimson' },
+  { hex: '#FF751F', name: 'Orange' },
+  { hex: '#EEAFA8', name: 'Blush' },
+  { hex: '#6F9FC8', name: 'Sky' },
+  { hex: '#050505', name: 'Ink' },
 ]
 
 /**
  * Reserved indicator color — not a user identity color, never selectable at
  * onboarding. Shown on a card/badge whenever more than one PIC is assigned,
  * since a single identity swatch can no longer represent "who's on it".
+ * Brand secondary yellow (#f9c339).
  */
-export const MULTI_PIC_COLOR = '#FFD400'
+export const MULTI_PIC_COLOR = '#F9C339'
 
 /** Pick a readable text color (black/white) for a given background hex. */
 export function textOn(hex: string): string {
