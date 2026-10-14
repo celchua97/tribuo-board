@@ -89,6 +89,7 @@ function mapCard(r: CardRow): Card {
       picIds: r.pic_ids ?? [],
       notes: r.notes ?? '',
       createdAt: r.requested_at ? Date.parse(r.requested_at) : card.createdAt,
+      isAppRelated: r.is_app_related ?? false,
     }
   }
   return card
@@ -391,6 +392,7 @@ export async function submitRequest(
   requesterId: string,
   picIds: string[],
   notes: string,
+  isAppRelated: boolean,
 ): Promise<void> {
   if (!supabase) return
   const client = supabase
@@ -400,14 +402,26 @@ export async function submitRequest(
       c.id === cardId
         ? {
             ...c,
-            request: { requesterId, picIds, notes: notes.trim(), createdAt: Date.parse(requested_at) },
+            request: {
+              requesterId,
+              picIds,
+              notes: notes.trim(),
+              createdAt: Date.parse(requested_at),
+              isAppRelated,
+            },
           }
         : c,
     ),
     () =>
       client
         .from('cards')
-        .update({ requester_id: requesterId, pic_ids: picIds, notes: notes.trim(), requested_at })
+        .update({
+          requester_id: requesterId,
+          pic_ids: picIds,
+          notes: notes.trim(),
+          requested_at,
+          is_app_related: isAppRelated,
+        })
         .eq('id', cardId),
     'Failed to submit request, re-syncing from server',
   )
@@ -425,7 +439,7 @@ export async function clearRequest(cardId: string): Promise<void> {
     () =>
       client
         .from('cards')
-        .update({ requester_id: null, pic_ids: [], notes: '', requested_at: null })
+        .update({ requester_id: null, pic_ids: [], notes: '', requested_at: null, is_app_related: false })
         .eq('id', cardId),
     'Failed to withdraw request, re-syncing from server',
   )

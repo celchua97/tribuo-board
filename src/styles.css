@@ -649,6 +649,11 @@ button {
   flex-direction: column;
   gap: 5px;
 }
+.modal-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .modal-title-input {
   width: 100%;
   border: 1px solid var(--border);
@@ -788,6 +793,41 @@ button {
   margin: 8px 0 0;
   font-size: 12px;
   color: var(--muted);
+}
+
+/* ---- App-related tag ---- */
+.app-tag {
+  display: inline-block;
+  font-size: inherit;
+  font-weight: 800;
+  color: var(--brand);
+  white-space: nowrap;
+  flex: 0 0 auto;
+  margin-right: 4px;
+}
+.app-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  margin-top: 10px;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+.app-toggle:hover {
+  border-color: var(--border-hover);
+  color: var(--text);
+}
+.app-toggle.active {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
 }
 .request-form .text-area {
   margin-top: 10px;

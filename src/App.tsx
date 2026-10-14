@@ -326,7 +326,9 @@ function CardTile({
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onOpen()}
     >
       <div className="card-drag-handle" aria-hidden="true">⋮⋮</div>
-      <div className="card-title">{card.title}</div>
+      <div className="card-title">
+        <CardTitleText card={card} />
+      </div>
       {card.description && <div className="card-desc">{card.description}</div>}
       {card.request && (
         <div className="card-tags" onClick={(e) => e.stopPropagation()}>
@@ -357,6 +359,18 @@ function CardTile({
   )
 }
 
+/** Prepends "[App]" wherever a title is shown read-only — set via the
+ * request form's "App-related" toggle, display-only (never edited into
+ * the stored title itself). */
+function CardTitleText({ card }: { card: Card }) {
+  return (
+    <>
+      {card.request?.isAppRelated && <span className="app-tag">[App]</span>}
+      {card.title}
+    </>
+  )
+}
+
 function HistoryRow({ card, onOpen }: { card: Card; onOpen: () => void }) {
   return (
     <div
@@ -366,7 +380,9 @@ function HistoryRow({ card, onOpen }: { card: Card; onOpen: () => void }) {
       onClick={onOpen}
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onOpen()}
     >
-      <span className="history-row-title">{card.title}</span>
+      <span className="history-row-title">
+        <CardTitleText card={card} />
+      </span>
       <span className="history-row-date">
         Archived {card.archivedAt ? formatShortDate(card.archivedAt) : ''}
       </span>
@@ -393,7 +409,9 @@ function StaleDoneRow({ card, onOpen }: { card: Card; onOpen: () => void }) {
       onClick={onOpen}
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onOpen()}
     >
-      <span className="history-row-title">{card.title}</span>
+      <span className="history-row-title">
+        <CardTitleText card={card} />
+      </span>
       <span className="history-row-date">
         {card.doneAt ? `Done ${formatShortDate(card.doneAt)} · ${daysSince(card.doneAt)} days ago` : ''}
       </span>

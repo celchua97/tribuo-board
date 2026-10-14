@@ -20,6 +20,8 @@ export interface CardRequest {
   picIds: string[]
   notes: string
   createdAt: number
+  /** Set via the "App-related" toggle at submission time; drives the [App] title prefix. */
+  isAppRelated: boolean
 }
 
 export interface Card {
