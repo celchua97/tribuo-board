@@ -29,6 +29,23 @@ interface Props {
   onClose: () => void
 }
 
+/**
+ * Swapped in for the plain notes box once "App-related" is on — same
+ * questions a good bug/feature report needs, as quick-pick prompts instead
+ * of one open text box. Answers are composed into the request's notes field
+ * (no separate storage), so they render later exactly like regular notes.
+ */
+const APP_BLOCKED_OPTIONS = [
+  { id: 'blocked', label: "Couldn't continue" },
+  { id: 'workaround', label: 'Found a workaround' },
+  { id: 'idea', label: 'Just an idea' },
+]
+const APP_FREQUENCY_OPTIONS = [
+  { id: 'every_shift', label: 'Every shift' },
+  { id: 'weekly', label: 'Weekly' },
+  { id: 'once', label: 'Just this once' },
+]
+
 export default function CardModal({ card, users, currentUser, onClose }: Props) {
   const [title, setTitle] = useState(card.title)
   const [description, setDescription] = useState(card.description)
@@ -36,6 +53,10 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
   const [picIds, setPicIds] = useState<string[]>([])
   const [notes, setNotes] = useState('')
   const [appRelated, setAppRelated] = useState(false)
+  const [appWhatHappened, setAppWhatHappened] = useState('')
+  const [appGoal, setAppGoal] = useState('')
+  const [appBlocked, setAppBlocked] = useState('')
+  const [appFrequency, setAppFrequency] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [showLinkForm, setShowLinkForm] = useState(false)
   const [linkUrl, setLinkUrl] = useState('')
@@ -64,13 +85,28 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
     setPicIds((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]))
   }
 
+  const composeAppNotes = () => {
+    const parts: string[] = []
+    if (appWhatHappened.trim()) parts.push(`What happened: ${appWhatHappened.trim()}`)
+    if (appGoal.trim()) parts.push(`What they're actually trying to do: ${appGoal.trim()}`)
+    const blockedLabel = APP_BLOCKED_OPTIONS.find((o) => o.id === appBlocked)?.label
+    if (blockedLabel) parts.push(`Did it block them? ${blockedLabel}`)
+    const frequencyLabel = APP_FREQUENCY_OPTIONS.find((o) => o.id === appFrequency)?.label
+    if (frequencyLabel) parts.push(`How often: ${frequencyLabel}`)
+    return parts.join('\n')
+  }
+
   const submit = () => {
     if (picIds.length === 0) return
-    submitRequest(card.id, currentUser.id, picIds, notes, appRelated)
+    submitRequest(card.id, currentUser.id, picIds, appRelated ? composeAppNotes() : notes, appRelated)
     setShowRequestForm(false)
     setPicIds([])
     setNotes('')
     setAppRelated(false)
+    setAppWhatHappened('')
+    setAppGoal('')
+    setAppBlocked('')
+    setAppFrequency('')
   }
 
   const remove = () => {
@@ -325,13 +361,68 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
               >
                 {appRelated ? '✓ ' : ''}App-related
               </button>
-              <textarea
-                className="text-area"
-                placeholder="Notes / context for this request…"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={2}
-              />
+              {appRelated ? (
+                <div className="app-request-form">
+                  <p className="field-hint app-request-intro">
+                    Since this touches the app, a few quick questions help us triage faster.
+                  </p>
+
+                  <label className="field-label">What happened?</label>
+                  <textarea
+                    className="text-area"
+                    placeholder="Walk us through what happened, or what you were hoping to do…"
+                    value={appWhatHappened}
+                    onChange={(e) => setAppWhatHappened(e.target.value)}
+                    rows={2}
+                  />
+
+                  <label className="field-label">What are you actually trying to get done?</label>
+                  <p className="field-hint">This is the part we look at most when triaging.</p>
+                  <textarea
+                    className="text-area"
+                    placeholder="What's the real goal behind this?"
+                    value={appGoal}
+                    onChange={(e) => setAppGoal(e.target.value)}
+                    rows={2}
+                  />
+
+                  <label className="field-label">Did it stop you?</label>
+                  <div className="option-picker">
+                    {APP_BLOCKED_OPTIONS.map((o) => (
+                      <button
+                        key={o.id}
+                        type="button"
+                        className={`option-choice${appBlocked === o.id ? ' selected' : ''}`}
+                        onClick={() => setAppBlocked((prev) => (prev === o.id ? '' : o.id))}
+                      >
+                        {o.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <label className="field-label">How often does this come up?</label>
+                  <div className="option-picker">
+                    {APP_FREQUENCY_OPTIONS.map((o) => (
+                      <button
+                        key={o.id}
+                        type="button"
+                        className={`option-choice${appFrequency === o.id ? ' selected' : ''}`}
+                        onClick={() => setAppFrequency((prev) => (prev === o.id ? '' : o.id))}
+                      >
+                        {o.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <textarea
+                  className="text-area"
+                  placeholder="Notes / context for this request…"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={2}
+                />
+              )}
               <div className="row-actions">
                 <button className="btn-primary" disabled={picIds.length === 0} onClick={submit}>
                   Submit request
