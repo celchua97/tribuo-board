@@ -701,7 +701,8 @@ button {
   margin: 0;
 }
 .status-picker,
-.pic-picker {
+.pic-picker,
+.option-picker {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
@@ -829,6 +830,51 @@ button {
   border-color: var(--brand);
   color: #fff;
 }
+
+/* ---- App-related structured questions (replaces the plain notes box) ---- */
+.app-request-form {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+}
+.app-request-form .field-label:first-of-type {
+  margin-top: 0;
+}
+.app-request-form .text-area {
+  margin-bottom: 4px;
+}
+.app-request-intro {
+  margin: 0 0 4px;
+}
+.field-hint {
+  margin: -2px 0 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.option-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+.option-choice:hover {
+  border-color: var(--border-hover);
+  color: var(--text);
+}
+.option-choice.selected {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+
 .request-form .text-area {
   margin-top: 10px;
 }
