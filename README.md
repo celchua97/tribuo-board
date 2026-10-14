@@ -36,6 +36,7 @@ Opens at http://localhost:5180. (Restart the dev server after creating/editing `
 
 - **Color = identity.** On first load you claim a unique color and attach your name. No two active users share a color (taken colors are locked in the picker). Your swatch — not your name — is the primary signal everywhere on the board.
 - **Requests.** Open a card → *Submit a request* → pick a PIC and add notes. Once submitted, the card shows **requester → PIC** as color badges. Before submission a card shows no requester/PIC.
+- **App-related tag.** While submitting a request, toggle the **App-related** button to mark it. If set, the card's title is shown everywhere with an **[App]** prefix (board, modal, History, Older Done) — purely a display flag, the stored title itself is never changed. It's only ever set at submission time and clears automatically if the request is withdrawn.
 - **Popovers.** Hover or click any color swatch to see that person's name and their open requests (as requester or PIC). Clicking pins it open; click outside to dismiss.
 - **Filter & sort.** Filter the board by status, requester, or PIC from the toolbar — or hit **Mine** to show only cards where *you* are the requester or PIC.
 - **Switch / add teammates.** The *Switch* button (top-right) reopens the identity picker so you can add another teammate or continue as an existing one.

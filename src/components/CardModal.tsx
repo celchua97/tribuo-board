@@ -35,6 +35,7 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
   const [showRequestForm, setShowRequestForm] = useState(false)
   const [picIds, setPicIds] = useState<string[]>([])
   const [notes, setNotes] = useState('')
+  const [appRelated, setAppRelated] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [showLinkForm, setShowLinkForm] = useState(false)
   const [linkUrl, setLinkUrl] = useState('')
@@ -65,10 +66,11 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
 
   const submit = () => {
     if (picIds.length === 0) return
-    submitRequest(card.id, currentUser.id, picIds, notes)
+    submitRequest(card.id, currentUser.id, picIds, notes, appRelated)
     setShowRequestForm(false)
     setPicIds([])
     setNotes('')
+    setAppRelated(false)
   }
 
   const remove = () => {
@@ -122,14 +124,17 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
             <label className="field-label" htmlFor="card-title-input">
               Title
             </label>
-            <input
-              id="card-title-input"
-              className="modal-title-input"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              onBlur={saveDetails}
-              placeholder="Card title…"
-            />
+            <div className="modal-title-row">
+              {card.request?.isAppRelated && <span className="app-tag">[App]</span>}
+              <input
+                id="card-title-input"
+                className="modal-title-input"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                onBlur={saveDetails}
+                placeholder="Card title…"
+              />
+            </div>
           </div>
           <button className="icon-btn" onClick={onClose} aria-label="Close">
             ×
@@ -312,6 +317,14 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
                   Shown as shared (yellow) on the board with {picIds.length} PICs assigned.
                 </p>
               )}
+              <button
+                type="button"
+                className={`app-toggle${appRelated ? ' active' : ''}`}
+                aria-pressed={appRelated}
+                onClick={() => setAppRelated((v) => !v)}
+              >
+                {appRelated ? '✓ ' : ''}App-related
+              </button>
               <textarea
                 className="text-area"
                 placeholder="Notes / context for this request…"

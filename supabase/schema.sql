@@ -29,6 +29,12 @@ create table if not exists public.cards (
 
 create index if not exists cards_status_idx on public.cards (status);
 
+-- App-related tag: set via the "App-related" toggle when submitting a
+-- request. Purely a display flag — drives the "[App]" title prefix in the
+-- client — and is cleared whenever a request is withdrawn, same as the
+-- other request fields above.
+alter table public.cards add column if not exists is_app_related boolean not null default false;
+
 -- Multi-PIC support: a request can now be assigned to more than one person.
 -- Migrate the old single pic_id column into a pic_ids array, then drop it.
 do $$
