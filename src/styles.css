@@ -349,6 +349,12 @@ button {
   font-size: 13px;
   color: var(--muted);
   line-height: 1.4;
+  /* Board tiles show a short preview only — open the card for the full text. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .card-tags {
   display: flex;
