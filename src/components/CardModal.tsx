@@ -96,8 +96,12 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
     return parts.join('\n')
   }
 
+  const appFormComplete =
+    appWhatHappened.trim() !== '' && appGoal.trim() !== '' && appBlocked !== '' && appFrequency !== ''
+  const canSubmitRequest = picIds.length > 0 && (!appRelated || appFormComplete)
+
   const submit = () => {
-    if (picIds.length === 0) return
+    if (!canSubmitRequest) return
     submitRequest(card.id, currentUser.id, picIds, appRelated ? composeAppNotes() : notes, appRelated)
     setShowRequestForm(false)
     setPicIds([])
@@ -423,8 +427,11 @@ export default function CardModal({ card, users, currentUser, onClose }: Props) 
                   rows={2}
                 />
               )}
+              {appRelated && !appFormComplete && (
+                <p className="field-hint">Answer all four questions above to submit.</p>
+              )}
               <div className="row-actions">
-                <button className="btn-primary" disabled={picIds.length === 0} onClick={submit}>
+                <button className="btn-primary" disabled={!canSubmitRequest} onClick={submit}>
                   Submit request
                 </button>
                 <button className="btn-ghost" onClick={() => setShowRequestForm(false)}>
