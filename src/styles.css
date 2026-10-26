@@ -636,14 +636,17 @@ button {
      scroll internally instead of overflowing off-screen with no way back. */
   max-height: calc(100vh - 120px);
   overflow-y: auto;
-  padding: 22px;
+  /* No top padding here — the sticky header below supplies its own, so its
+     "top: 0" lines up exactly with the scrollport's edge. A top padding on
+     the scroll container itself would leave a gap above the sticky header
+     that scrolled-past content can show through once you scroll at all. */
+  padding: 0 22px 22px 22px;
 }
 .modal-head {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  margin-bottom: 16px;
-  /* Keep the title + close button reachable while the body scrolls. */
+  padding: 22px 0 16px;
   position: sticky;
   top: 0;
   background: var(--surface);
